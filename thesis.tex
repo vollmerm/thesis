@@ -1,5 +1,16 @@
 \documentclass[showabstract,showacknowledgments,showpreface,showdedication]{iuphd} 
 
+\PassOptionsToPackage{dvipsnames}{xcolor}
+\usepackage{marvosym,listings,etoolbox,amsmath}
+\usepackage{mathtools}
+\usepackage{MnSymbol}
+\usepackage{xspace}
+\usepackage{mathpartir}
+%% \usepackage{hyperref}
+\usepackage{graphicx}
+%% \usepackage{subcaption}
+
+
 % For title and abstract page
 
 \title{A Language-based Approach to Programming with Serialized Data}
@@ -17,6 +28,10 @@
 
 % For Copyright Page
 \cryear{2020} % Copyright year
+
+\input{defs}
+\input{formal_typings1}
+%% \input{haskell_style}
 
 \begin{document}
 \maketitle
@@ -55,6 +70,29 @@ This abstract page is required. Make sure to adhere to the word count and other 
 % This page is required
 
 \tableofcontents
+
+\chapter{Introduction}
+
+Words. Words.
+
+\chapter{The Location Calculus}
+
+Words.
+
+\begin{figure}
+  \input{formal_grammar}
+  \caption{Grammar of \ourcalc{}}
+  \label{fig:grammar}  
+\end{figure}
+
+
+\chapter{The Gibbon Compiler}
+
+Words.
+
+\chapter{Serialized Abstract Syntax Trees}
+
+Words.
 
 \chapter{Documentation}
 
@@ -95,7 +133,6 @@ The appropriate commands for each section are detailed in the section that follo
 The following document \emph{should} adhere to the current standards of the Graduate School (last updated in Summer 2018). The current order of the sections must be
 
 \begin{itemize}
-
 \item Title Page
 \item Acknowledgements (optional)
 \item Dedication (optional)

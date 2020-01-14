@@ -1,0 +1,38 @@
+\begin{displaymath}
+  \begin{aligned}
+  &\DC \in \; \textup{Data Constructors},\:\: \TYP \in \; \textup{Type Constructors},\\
+  &\var, \yvar,\fvar \in \; \textup{Variables},\:\:
+  \loc, \locreg{l}{r} \in \; \textup{Symbolic Locations},\\
+  &\reg \in \; \textup{Regions},\:\: \ind, \indj \in \; \textup{Region Indices},\\
+  &\concreteloc{r}{i}{l} \in \; \textup{Concrete Locations}
+  \end{aligned}
+\end{displaymath}
+\begin{displaymath}
+  \begin{aligned}
+    \textup{Top-Level Programs} && \PROG && \gramdef & \overharpoon{\DD} \;; \overharpoon{\FD} \;; \EXPR \\
+    \textup{Datatype Declarations} && \DD && \gramdef & \DATA\;\TYP = \overharpoon{\DC \; \overharpoon{\sTYP}\;} \\
+    \textup{Function Declarations} && \FD && \gramdef & \fvar : \TS ; \fvar \overharpoon{\var} = \EXPR \\
+    %\textup{Data Location} && \RP && \gramdef & \loc^{\reg} \\
+%    \textup{Types} && \TYP && \gramdef & \ldots \gramor \TC \gramor \ldots \\
+    %\gramor \ldots \\ % maybe don't even talk about int, is it confusing to have non-packed data?
+    \textup{Located Types} && \hTYP && \gramdef & \tyatlocreg{\TYP}{\loc}{\reg} \\
+    \textup{Type Scheme} && \TS && \gramdef &
+      \forall _{\overharpoon{\locreg{l}{r}}}.
+      \overharpoon{\hTYP} \ARROW \hTYP \\
+    \textup{Values} && \VAL && \gramdef & \var \gramor \concreteloc{\reg}{\ind}{\locreg{\loc}{\reg}}\\
+    \textup{Expressions} && \EXPR && \gramdef & \VAL\\[-5pt]
+    && && \gramor & \fapp{\overharpoon{\locreg{l}{r}}}{\overharpoon{\VAL}} \\
+    && && \gramor & \datacon{\DC}{\keywd{\locreg{\loc}{\reg}}}{\overharpoon{\VAL}}\\
+    %% && && \gramor & \datacon{\DC}{\keywd{\locreg{\loc}{\reg}}}{\overline{\var}} \gramor \litcon{\locreg{\loc}{\reg}}{\EXPR} \\
+    && && \gramor & \letpack{\var:\hTYP}{\EXPR}{\EXPR} \\
+    && && \gramor & \letloc{\locreg{\loc}{\reg}}{\LE}{\EXPR} \\
+    && && \gramor & \letreg{\reg}{\EXPR} \\
+    && && \gramor & \case{\VAL}{\overharpoon{\pat}} \\
+    \textup{Pattern} && \pat && \gramdef &
+    \caseclause{\datacon{\DC}{}{(\overharpoon{\var : \hTYP})}}{\EXPR} \\
+    \textup{Location Expressions} && \LE && \gramdef
+    & \startr{\reg} \\
+    && && \gramor & (\locreg{\loc}{r} + 1) \\
+    && && \gramor & \afterl{\hTYP}
+  \end{aligned}
+\end{displaymath}

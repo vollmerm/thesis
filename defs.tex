@@ -1,0 +1,211 @@
+% ================================================================================
+% extra \newcommand's specific to this paper.
+% ================================================================================
+
+%% Oh no, we don't actually HAVE lambda!
+%% Later we'll have to make this a higher-order calculus!
+%% \newcommand{\ourcalc}[0]{\ensuremath{\lambda^{loc}}}
+%% \newcommand{\lamadt}{\ensuremath{\lambda^{adt}}}
+%% \newcommand{\lamcur}{\ensuremath{\lambda^{cur}}}
+
+%% Proposal 1 - hey, we have capital lambda, and it's even the thing that binds
+%% our lovely locations.
+%% \newcommand{\ourcalc}[0]{\ensuremath{\Lambda^{loc}}}
+%% \newcommand{\lamadt}{\ensuremath{\Lambda^{adt}}}
+%% \newcommand{\lamcur}{\ensuremath{\Lambda^{cur}}}
+
+% TODO: coming up with a new name.  RECONCILE usages with \ourcalc below.
+% Ones using this macro have already been audited/reconciled.
+\newcommand{\sysname}[0]{LoCal\xspace}
+
+%% %% Proposal 2 - Core, like GHC Core.
+% \newcommand{\ourcalc}[0]{\ensuremath{Core^{loc}}}
+
+%% Helpers
+\newcommand{\ourcalc}[0]{\sysname}
+% \newcommand{\lamadt} [0]{\ensuremath{Core^{adt}}}
+\newcommand{\lamadt} [0]{HiCal\xspace}
+% \newcommand{\lamcur} [0]{\ensuremath{Core^{cur}}}
+% \newcommand{\lamcur} [0]{\textsf{Cursored}}
+% \newcommand{\lamcur} [0]{\textsf{CursedCal}}
+
+\newcommand{\lamcur}[0]{NoCal\xspace}
+
+\newcommand{\gramdef}{\; ::= \;}
+\newcommand{\gramor}{\; | \;}
+\newcommand{\keywd}[1]{\mathit{#1}}
+\newcommand{\gramwd}[1]{\texttt{#1}}
+\newcommand{\sgramwd}[1]{\texttt{#1}}
+\newcommand{\skeywd}[1]{\mathit{#1}}
+
+%% Grammar
+\newcommand{\PROG}{\keywd{top}}
+\newcommand{\DD}{\keywd{dd}}
+\newcommand{\VD}{\keywd{vd}}
+\newcommand{\FD}{\keywd{fd}}
+\newcommand{\DC}{\keywd{K}}
+\newcommand{\sDC}{\skeywd{K}}
+\newcommand{\TC}{\keywd{T}}
+\newcommand{\EXPR}{\keywd{e}}
+\newcommand{\sEXPR}{\skeywd{e}}
+\newcommand{\DATA}{\gramwd{data}}
+\newcommand{\TYP}{\keywd{\tau}}
+\newcommand{\hTYP}{\keywd{\hat{\tau}}}
+\newcommand{\sTYP}{\skeywd{\tau}}
+\newcommand{\var}{\svar}
+\newcommand{\svar}{x}
+\newcommand{\fvar}{\sfvar}
+\newcommand{\sfvar}{f}
+\newcommand{\yvar}{y}
+\newcommand{\num}{n}
+\newcommand{\ARROW}{\rightarrow}
+\newcommand{\RP}{\keywd{dl}}
+\newcommand{\sRP}{\skeywd{dl}}
+\newcommand{\loc}{\skeywd{l}}
+\newcommand{\sloc}{\skeywd{l}}
+\newcommand{\concreteloc}[3]{\ensuremath{\langle #1, #2 \rangle ^{#3}}}
+\newcommand{\reg}{\skeywd{r}}
+\newcommand{\sreg}{\skeywd{r}}
+\newcommand{\LS}{\keywd{ls}}
+\newcommand{\LC}{\keywd{lc}}
+\newcommand{\LE}{\keywd{le}}
+\newcommand{\letpack}[3]{\gramwd{let}\;#1=#2\;\gramwd{in}\;#3}
+\newcommand{\letloc}[3]{\gramwd{letloc}\;#1 = #2\;\gramwd{in}\;#3}
+\newcommand{\letreg}[2]{\gramwd{letregion}\;#1\;\gramwd{in}\;#2}
+\newcommand{\fapp}[2]{\fvar \;[#1]\; #2}
+\newcommand{\TS}{\keywd{ts}}
+\newcommand{\ssetbool}[4]{#4 = #3[#2\mapsto \keywd{#1}=\keywd{True}]}
+\newcommand{\sinlinesetbool}[3]{#3[#2\mapsto \keywd{#1}=\keywd{True}]}
+\newcommand{\CS}{\keywd{cs}}
+\newcommand{\pat}{\keywd{pat}}
+\newcommand{\ptr}[2]{(\gramwd{ptr}\;\keywd{#1}\;\keywd{#2})}
+\newcommand{\sind}{i}
+\newcommand{\ind}{\keywd{i}}
+\newcommand{\indj}{\keywd{j}}
+\newcommand{\VAL}{\keywd{v}}
+\newcommand{\ec}{\keywd{\mathcal{E}}}
+\newcommand{\evalc}[1]{\ec \llbracket #1 \rrbracket }
+\newcommand{\STOR}{\keywd{S}}
+\newcommand{\stepsto}{\Rightarrow}
+\newcommand{\Name}{\Red{Name }}
+\newcommand{\q}[1]{\texttt{#1}}
+\newcommand{\frl}[1]{{\ensuremath \mathit{frl}(#1)}}
+\newcommand{\caseclause}[2]{#1 \;\rightarrow \;#2}
+\newcommand{\case}[2]{\gramwd{case}\; #1 \;\gramwd{of}\;#2}
+\newcommand{\spat}{\keywd{spat}}
+\newcommand{\switch}[2]{\gramwd{switch}\; #1 \;\gramwd{of}\;#2}
+\newcommand{\readInt}[1]{\gramwd{\text{readInt}} \; #1}
+\newcommand{\writeInt}[2]{\gramwd{\text{writeInt}} \; #1 \; #2}
+\newcommand{\readTag}[1]{\gramwd{\text{readTag}} \; #1}
+\newcommand{\writeTag}[2]{\gramwd{\text{writeTag}} \; #1 \; #2}
+\newcommand{\readCursor}[1]{\gramwd{\text{readCursor}} \; #1}
+\newcommand{\writeCursor}[2]{\gramwd{\text{writeCursor}} \; #1 \; #2}
+\newcommand{\datacon}[3]{\ensuremath{#1 \;#2 \;#3}}
+\newcommand{\litcon}[2]{\datacon{\keywd{L}}{#1}{#2}}
+\newcommand{\litnum}{\keywd{n}}
+\newcommand{\CP}{\keywd{cp}}
+\newcommand{\tptr}[3]{\langle \mathit{ptr}\;#2\;#3 \rangle_{#1}}
+\newcommand{\LM}{\keywd{M}}
+\newcommand{\locis}[2]{\ensuremath{#1:#2}}
+\newcommand{\lvar}{\keywd{lx}}
+\newcommand{\has}[3]{\ensuremath{#1(#2) = #3}}
+\newcommand{\startr}[1]{(\gramwd{start}\; #1)}
+\newcommand{\afterl}[1]{(\gramwd{after}\; #1)}
+\newcommand{\tightoverset}[2]{%
+  \mathop{#2}\limits^{\vbox to -.5ex{\kern-0.75ex\hbox{$#1$}\vss}}}
+\newcommand\set[1]{\{ \, \ensuremath{#1} \,\}}
+\newcommand{\ecdot}{\bullet}
+\newcommand{\heap}{\keywd{h}}
+\newcommand{\alphaequiv}{=_{\alpha}}
+
+%% Environments
+\newcommand{\LENV}{\keywd{L}}
+\newcommand{\RENV}{\keywd{R}}
+\newcommand{\CENV}{\keywd{C}}
+\newcommand{\TENV}{\keywd{\Gamma}}
+\newcommand{\EENV}{\keywd{E}}
+\newcommand{\SENV}{\keywd{\Sigma}}
+\newcommand{\MENV}{\keywd{M}}
+\newcommand{\FENV}{\keywd{F}}
+\newcommand{\AENV}{\keywd{A}}
+\newcommand{\NENV}{\keywd{N}}
+
+%% Loc helpers
+\newcommand{\inloc}[0]{\ensuremath{\downarrow\sloc}}
+\newcommand{\outloc}[0]{\ensuremath{\uparrow\sloc}}
+\newcommand{\locreg}[2]{\ensuremath{{#1}^{#2}}}
+\newcommand{\tyatlocreg}[3]{#1 \ensuremath{@} \locreg{#2}{#3}}
+\newcommand{\Cursorize}[0]{Cursorize}
+\newcommand{\fresh}[0]{\keywd{fresh}}
+
+%% Meta functions
+
+% Takes FROM,TO, i.e. \subst{e}{x}{v}.
+\newcommand{\subst}[3]{\ensuremath{#1[#3/#2]}}
+
+\newcommand{\typeofcon}{\keywd{TypeOfCon}}
+\newcommand{\typeoffield}{\keywd{TypeOfField}}
+\newcommand{\kargtys}{\keywd{ArgTysOfConstructor}}
+\newcommand{\allocptr}[2]{\keywd{MaxIdx}(#1,#2)}
+
+% Update(M,key,val), e.g. M[key>val]
+%\newcommand{\update}[3]{\ensuremath{((#2 \mapsto #3)\; #1)}}
+\newcommand{\update}[3]{\ensuremath{#1+\{#2 \mapsto #3\}}}
+
+\newcommand{\ewitness}[4]{\ensuremath{#1;#2;#3 \vdash_{ew} #4}}
+\newcommand{\storewf}[6]{\ensuremath{#1;#2;#3;#4 \vdash_{wf} #5;#6}}
+\newcommand{\storewfcfa}[3]{\ensuremath{#1 \vdash_{wf_{cfc}} #2;#3}}
+\newcommand{\storewfca}[4]{\ensuremath{#1;#2 \vdash_{wf_{ca}} #3;#4}}
+
+\newcommand{\tcfun}{\ensuremath{\vdash_{fun}}}
+\newcommand{\tcpat}{\ensuremath{\vdash_{pat}}}
+\newcommand{\tcts}{\ensuremath{\vdash_{ts}}}
+
+%% Special references for proofs.
+\newcommand{\refwellformed}[2]{WF~\ref{#1};\ref{#2}}
+\newcommand{\refendwitness}[2]{EW~\ref{#1};\ref{#2}}
+\newcommand{\refts}[1]{T-#1}
+\newcommand{\refcase}[1]{Case-\ref{#1}}
+\newcommand{\elimexists}[0]{$\exists$ elim}
+\newcommand{\refinst}[0]{Inst.}
+
+\newcommand{\tfunctiondef}{T-Function-Definition}
+\newcommand{\tdatacon}{T-DataConstructor}
+\newcommand{\ddatacon}{D-DataConstructor}
+\newcommand{\dletloctag}{D-LetLoc-Tag}
+\newcommand{\dletlocafter}{D-LetLoc-After}
+\newcommand{\dletlocstart}{D-LetLoc-Start}
+\newcommand{\dapp}{D-App}
+\newcommand{\dletregion}{D-LetRegion}
+\newcommand{\tcase}{T-Case}
+\newcommand{\dcase}{D-Case}
+\newcommand{\tpat}{T-Pattern}
+\newcommand{\tprogram}{T-Program}
+\newcommand{\tllafter}{T-LetLoc-After}
+\newcommand{\tlltag}{T-LetLoc-Tag}
+\newcommand{\tllstart}{T-LetLoc-Start}
+\newcommand{\tlregion}{T-LetRegion}
+\newcommand{\tvar}{T-Var}
+\newcommand{\tlet}{T-Let}
+\newcommand{\dletexp}{D-Let-Expr}
+\newcommand{\dletval}{D-Let-Val}
+\newcommand{\tapp}{T-App}
+\newcommand{\tconcreteloc}{T-Concrete-Loc}
+
+\newcommand{\emptytenv}{\emptyset}
+
+%% Formatting
+
+%% fdtools, harpoon are packages that provide this feature, but
+%% have their own set of problems. We do this by hand instead:
+%% https://tex.stackexchange.com/questions/304622
+%% \makeatletter
+%% \newcommand*\MY@rightharpoonupfill@{%
+%%   \arrowfill@\relbar\relbar\rightharpoonup
+%% }
+%% \newcommand*\overrightharpoon{%
+%%   \mathpalette{\overarrow@\MY@rightharpoonupfill@}%
+%% }
+%% \makeatother
+\newcommand{\overharpoon}[1]{\overrightharpoon{#1}}
+
