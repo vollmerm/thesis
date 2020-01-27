@@ -95,6 +95,19 @@ Words. Words.
 
 \chapter{The Location Calculus}
 
+\section{Overview}
+
+Traditional compilers are built on a number of well-defined
+intermediate abstractions and translations that close the semantic gap
+between source and target.  What we {need are analogous way-points to
+  structure compilers that target serialized-data traversals}
+(stream-processors, essentially).  Indeed, there is quite a semantic
+gap between the low-level, buffer-mutating, pointer-bumping programs,
+and a source language of high-level, pure, recursive functions on
+algebraic datatypes.  To structure the space between, we propose a
+location calculus, \ourcalc, augmented to track {\em locations} within
+regions (\eg{} byte offsets).
+
 \ourcalc follows in the tradition of typed assembly language~\cite{TAL},
 region calculi~\cite{mlkit-retrospective}, and Cyclone~\cite{cyclone-pldi}
 in that it uses types to both
@@ -297,7 +310,7 @@ and operational semantics (\secref{subsec:dynamic}),
 before moving on to implementation (\secref{sec:impl-local}, \secref{sec:impl-hical})
 and evaluation (\secref{sec:eval}).
 
-\subsection{Formal Language and Grammar}
+\section{Formal Language and Grammar}
 \label{subsec:grammar}
 
 \begin{figure}
@@ -951,7 +964,7 @@ has a store that is well formed, as described in \Secref{sec:well-formedness}.
 %
 The program can start taking evaluation steps from this configuration.
 
-\subsubsection{Example: allocating a binary tree.}
+\subsection{Example: Allocating a Binary Tree.}
 \label{sec:dynsem-example}
 %
 Consider this code snippet of \ourcalc{}.
@@ -1008,10 +1021,13 @@ witness of the second field is the end witness of the entire
 constructor, as is the case here.
 
 
-
 \chapter{The Gibbon Compiler}
 
 Words.
+
+\section{Compiling the Location Calculus} \label{sec:impl-local}
+
+\section{Evaluation}
 
 \chapter{Serialized Abstract Syntax Trees}
 
