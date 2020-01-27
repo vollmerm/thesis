@@ -1,0 +1,800 @@
+@techreport{LoCal-tr,
+  author =        {Michael Vollmer and Chaitanya Koparkar and and Mike Rainey and Laith Sakka and Milind Kulkarni and Ryan R. Newton},
+  institution =   {Indiana University},
+  note =          {\url{https://help.sice.indiana.edu/techreports/TRNNN.cgi?trnum=TR741}},
+  type =          {Technical Report},
+  title =         {LoCal: A Language for Programs Operating on Serialized Data},
+  year =          {2019},
+}
+
+@inproceedings{TAL,
+ author = {Morrisett, Greg and Walker, David and Crary, Karl and Glew, Neal},
+ title = {From System F to Typed Assembly Language},
+ booktitle = {Proceedings of the 25th ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages},
+ series = {POPL '98},
+ year = {1998},
+ isbn = {0-89791-979-3},
+ location = {San Diego, California, USA},
+ pages = {85--97},
+ numpages = {13},
+ url = {http://doi.acm.org/10.1145/268946.268954},
+ doi = {10.1145/268946.268954},
+ acmid = {268954},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+}
+
+@article{regioncalcs,
+ author = {Tofte, Mads and Talpin, Jean-Pierre},
+ title = {Region-Based Memory Management},
+ journal = {Inf. Comput.},
+ issue_date = {Feb. 1, 1997},
+ volume = {132},
+ number = {2},
+ month = feb,
+ year = {1997},
+ issn = {0890-5401},
+ pages = {109--176},
+ numpages = {68},
+ url = {http://dx.doi.org/10.1006/inco.1996.2613},
+ doi = {10.1006/inco.1996.2613},
+ acmid = {249661},
+ publisher = {Academic Press, Inc.},
+ address = {Duluth, MN, USA},
+}
+
+@book{pltredex,
+ author = {Felleisen, Matthias and Findler, Robert Bruce and Flatt, Matthew},
+ title = {Semantics Engineering with PLT Redex},
+ year = {2009},
+ isbn = {0262062755, 9780262062756},
+ edition = {1st},
+ publisher = {The MIT Press},
+} 
+
+@InProceedings{ecoop17-gibbon,
+  author =	{Michael Vollmer and Sarah Spall and Buddhika Chamith and Laith Sakka and Chaitanya Koparkar and Milind Kulkarni and Sam Tobin-Hochstadt and Ryan R. Newton},
+  title =	{{Compiling Tree Transforms to Operate on Packed Representations}},
+  booktitle =	{31st European Conference on Object-Oriented Programming (ECOOP 2017)},
+  pages =	{26:1--26:29},
+  series =	{Leibniz International Proceedings in Informatics (LIPIcs)},
+  ISBN =	{978-3-95977-035-4},
+  ISSN =	{1868-8969},
+  year =	{2017},
+  volume =	{74},
+  editor =	{Peter M{\"u}ller},
+  publisher =	{Schloss Dagstuhl--Leibniz-Zentrum fuer Informatik},
+  address =	{Dagstuhl, Germany},
+  URL =		{http://drops.dagstuhl.de/opus/volltexte/2017/7273},
+  URN =		{urn:nbn:de:0030-drops-72737},
+  doi =		{10.4230/LIPIcs.ECOOP.2017.26},
+  annote =	{Keywords: compiler optimization, program transformation, tree traversal}
+}
+
+@article{Chilimbi1999,
+  author =        {Chilimbi, TM and Hill, MD and Larus, JR},
+  journal =       {ACM SIGPLAN Notices},
+  title =         {{Cache-conscious structure layout}},
+  year =          {1999},
+  annote =        {This is the ccmorph paper.},
+  url =           {http://dl.acm.org/citation.cfm?id=301633},
+}
+
+@misc{capnproto,
+  author =        {Varda, Kenton},
+  title =         {{Cap'n Proto}},
+  year =          {2015},
+  url =           {https://capnproto.org/},
+}
+
+@inproceedings{cnf-icfp15,
+  address =       {New York, NY, USA},
+  author =        {Yang, Edward Z. and Campagna, Giovanni and
+                   A\u{g}acan, \"{O}mer S. and El-Hassany, Ahmed and
+                   Kulkarni, Abhishek and Newton, Ryan R.},
+  booktitle =     {Proceedings of the 20th ACM SIGPLAN International
+                   Conference on Functional Programming},
+  pages =         {362--374},
+  publisher =     {ACM},
+  series =        {ICFP 2015},
+  title =         {Efficient Communication and Collection with Compact
+                   Normal Forms},
+  year =          {2015},
+  doi =           {10.1145/2784731.2784735},
+  isbn =          {978-1-4503-3669-7},
+  url =           {http://doi.acm.org/10.1145/2784731.2784735},
+}
+
+@article{mlkit,
+  author =        {Mads Tofte and Jean{-}Pierre Talpin},
+  journal =       {Inf. Comput.},
+  number =        {2},
+  pages =         {109--176},
+  title =         {Region-based Memory Management},
+  volume =        {132},
+  year =          {1997},
+  biburl =        {http://dblp.uni-trier.de/rec/bib/journals/iandc/TofteT97},
+}
+
+@article{Lattner2005,
+  author =        {Lattner, Chris and Adve, Vikram},
+  journal =       {ACM SIGPLAN Notices},
+  pages =         {129--142},
+  title =         {{Automatic pool allocation: improving performance by
+                   controlling data structure layout in the heap}},
+  volume =        {40},
+  year =          {2005},
+  abstract =      {This paper describes Automatic Pool Allocation, a
+                   transformation framework that segregates distinct
+                   instances of heap-based data structures into seperate
+                   memory pools and allows heuristics to be used to
+                   partially control the internal layout of those data
+                   structures. The primary goal of this work is
+                   performance improvement, not automatic memory
+                   management, and the paper makes several new
+                   contributions. The key contribution is a new compiler
+                   algorithm for partitioning heap objects in imperative
+                   programs based on a context-sensitive pointer
+                   analysis, including a novel strategy for correct
+                   handling of indirect (and potentially unsafe)
+                   function calls. The transformation does not require
+                   type safe programs and works for the full generality
+                   of C and C++. Second, the paper describes several
+                   optimizations that exploit data structure
+                   partitioning to further improve program performance.
+                   Third, the paper evaluates how memory hierarchy
+                   behavior and overall program performance are impacted
+                   by the new transformations. Using a number of
+                   benchmarks and a few applications, we find that
+                   compilation times are extremely low, and overall
+                   running times for heap intensive programs speed up by
+                   10-25\% in many cases, about 2x in two cases, and
+                   more than 10x in two small benchmarks. Overall, we
+                   believe this work provides a new framework for
+                   optimizing pointer intensive programs by segregating
+                   and controlling the layout of heap-based data
+                   structures.},
+  annote =        {Looks very apt. Also a good seed for pulling in the
+                   region inference literature. (MLKit being the obvious
+                   one)},
+  doi =           {10.1145/1065010.1065027},
+  isbn =          {1595930566},
+  issn =          {0362-1340},
+}
+
+@inproceedings{Chilimbi1999b,
+  address =       {New York, NY, USA},
+  author =        {Chilimbi, Trishul M. and Davidson, Bob and
+                   Larus, James R.},
+  booktitle =     {Proceedings of the ACM SIGPLAN 1999 conference on
+                   Programming language design and implementation},
+  pages =         {13--24},
+  publisher =     {ACM},
+  series =        {PLDI '99},
+  title =         {Cache-conscious structure definition},
+  year =          {1999},
+  doi =           {http://doi.acm.org/10.1145/301618.301635},
+  isbn =          {1-58113-094-5},
+  url =           {http://doi.acm.org/10.1145/301618.301635},
+}
+
+@inproceedings{Truong1998,
+  address =       {Washington, DC, USA},
+  author =        {Truong, D. N. and Bodin, F. and Seznec, A.},
+  booktitle =     {Proceedings of the 1998 International Conference on
+                   Parallel Architectures and Compilation Techniques},
+  pages =         {322--},
+  publisher =     {IEEE Computer Society},
+  series =        {PACT '98},
+  title =         {Improving Cache Behavior of Dynamically Allocated
+                   Data Structures},
+  year =          {1998},
+  isbn =          {0-8186-8591-3},
+  url =           {http://portal.acm.org/citation.cfm?id=522344.825680},
+}
+
+@misc{Chilimbi1999a,
+  author =        {Chilimbi, Trishul M. and Larus, James R.},
+  booktitle =     {ACM SIGPLAN Notices},
+  pages =         {37--48},
+  title =         {{Using generational garbage collection to implement
+                   cache-conscious data placement}},
+  volume =        {34},
+  year =          {1999},
+  abstract =      {Processor and memory technology trends show a
+                   continual increase in the cost of accessing main
+                   memory. Machine designers have tried to mitigate the
+                   effect of this trend through a variety of techniques
+                   that attempt to reduce or tolerate memory latency.
+                   These techniques, unfortunately, have only been
+                   partially successful for pointer- manipulating
+                   programs. Recent research has demonstrated that these
+                   programs can benefit greatly from the complementary
+                   approach of reorganizing pointer data structures to
+                   improve cache locality. This paper describes how a
+                   generational garbage collector can be used to achieve
+                   a cache-conscious data layout, in which objects with
+                   high temporal affinity are placed next to each other,
+                   so they are likely to reside in the same cache block.
+                   The paper demonstrates the feasibility of collecting
+                   low overhead, real-time profiling information about
+                   data access patterns for object-oriented languages,
+                   and describes a new copying algorithm that utilizes
+                   this information to produce a cache-conscious object
+                   layout. Preliminary results indicate that this
+                   technique reduces cache miss rates by
+                   21-42$\backslash$\%, and improves program performance
+                   by 14-37$\backslash$\%.},
+  doi =           {10.1145/301589.286865},
+  isbn =          {1-58113-114-3},
+  issn =          {03621340},
+}
+
+@inproceedings{Lattner2005mspc,
+  address =       {New York, NY, USA},
+  author =        {Lattner, Chris and Adve, Vikram S.},
+  booktitle =     {Proceedings of the 2005 Workshop on Memory System
+                   Performance},
+  pages =         {24--35},
+  publisher =     {ACM},
+  series =        {MSP '05},
+  title =         {Transparent Pointer Compression for Linked Data
+                   Structures},
+  year =          {2005},
+  doi =           {10.1145/1111583.1111587},
+  isbn =          {1-59593-147-3},
+  url =           {http://doi.acm.org/10.1145/1111583.1111587},
+}
+
+@inproceedings{hsu2016key,
+  address =       {New York, NY, USA},
+  author =        {Hsu, Aaron W.},
+  booktitle =     {{Proceedings of the 3rd ACM SIGPLAN International
+                   Workshop on Libraries, Languages, and Compilers for
+                   Array Programming}},
+  pages =         {32--40},
+  publisher =     {ACM},
+  series =        {ARRAY 2016},
+  title =         {{The Key to a Data Parallel Compiler}},
+  year =          {2016},
+  doi =           {10.1145/2935323.2935331},
+  isbn =          {978-1-4503-4384-8},
+  url =           {http://doi.acm.org/10.1145/2935323.2935331},
+}
+
+@article{makino90,
+  author =        {Makino, Junichiro},
+  journal =       {J. Comput. Phys.},
+  month =         {March},
+  pages =         {148--160},
+  title =         {Vectorization of a treecode},
+  volume =        {87},
+  year =          {1990},
+  doi =           {10.1016/0021-9991(90)90231-O},
+  issn =          {0021-9991},
+  url =           {http://portal.acm.org/citation.cfm?id=78582.78602},
+}
+
+@inproceedings{goldfarb13sc,
+  author =        {Goldfarb, Michael and Jo, Youngjoon and
+                   Kulkarni, Milind},
+  booktitle =     {Proceedings of the International Conference on High
+                   Performance Computing, Networking, Storage and
+                   Analysis (Supercomputing)},
+  series =        {SC '13},
+  title =         {General transformations for GPU execution of tree
+                   traversals},
+  year =          {2013},
+}
+
+@inproceedings{Meyerovich2011,
+  address =       {},
+  author =        {Meyerovich, Leo A. and Mytkowicz, Todd and
+                   Schulte, Wolfram},
+  booktitle =     {HotPAR},
+  chapter =       {},
+  journal =       {},
+  month =         {May},
+  pages =         {},
+  publisher =     {USENIX},
+  title =         {Data Parallel Programming for Irregular Tree
+                   Computations},
+  volume =        {},
+  year =          {2011},
+  isbn =          {},
+  url =           {https://www.microsoft.com/en-us/research/publication/data-
+                  parallel-programming-for-irregular-tree-computations/},
+}
+
+@inproceedings{ren13cgo,
+  author =        {Bin Ren and Gagan Agrawal and James R. Larus and
+                   Todd Mytkowicz and Tomi Poutanen and Wolfram Schulte},
+  booktitle =     {Proceedings of the 2013 {IEEE/ACM} International
+                   Symposium on Code Generation and Optimization, {CGO}
+                   2013, Shenzhen, China, February 23-27, 2013},
+  pages =         {20:1--20:10},
+  publisher =     {{IEEE} Computer Society},
+  title =         {{SIMD} parallelization of applications that traverse
+                   irregular data structures},
+  year =          {2013},
+  biburl =        {http://dblp.uni-trier.de/rec/bib/conf/cgo/RenALMPS13},
+  doi =           {10.1109/CGO.2013.6494989},
+  isbn =          {978-1-4673-5524-7},
+  url =           {http://dx.doi.org/10.1109/CGO.2013.6494989},
+}
+
+@article{ren14taco,
+  author =        {Bin Ren and Todd Mytkowicz and Gagan Agrawal},
+  journal =       {{TACO}},
+  number =        {2},
+  pages =         {16:1--16:31},
+  title =         {A Portable Optimization Engine for Accelerating
+                   Irregular Data-Traversal Applications on {SIMD}
+                   Architectures},
+  volume =        {11},
+  year =          {2014},
+  biburl =        {http://dblp.uni-trier.de/rec/bib/journals/taco/RenMA14},
+  doi =           {10.1145/2632215},
+  url =           {http://doi.acm.org/10.1145/2632215},
+}
+
+@techreport{plt-tr1,
+  author =        {Matthew Flatt and PLT},
+  institution =   {PLT Design, Inc.},
+  note =          {\url{http://racket-lang.org/tr1/}},
+  type =          {Technical Report},
+  title =         {Reference: Racket},
+  year =          {2010},
+}
+
+@inproceedings{popl08,
+  author =        {Sam Tobin-Hochstadt and Matthias Felleisen},
+  booktitle =     {},
+  pages =         {395--406},
+  title =         {The design and implementation of {Typed} {Scheme}},
+  year =          {2008},
+}
+
+@phdthesis{larus89,
+  author =        {James Larus},
+  school =        {University of California at Berkeley},
+  title =         {Restructuring Symbolic Programs for Concurrent
+                   Execution on Multiprocessors},
+  year =          {1989},
+}
+
+@inproceedings{urweb-icfp,
+  address =       {New York, NY, USA},
+  author =        {Chlipala, Adam},
+  booktitle =     {Proceedings of the 20th ACM SIGPLAN International
+                   Conference on Functional Programming},
+  pages =         {10--21},
+  publisher =     {ACM},
+  series =        {ICFP 2015},
+  title =         {An Optimizing Compiler for a Purely Functional
+                   Web-application Language},
+  year =          {2015},
+  doi =           {10.1145/2784731.2784741},
+  isbn =          {978-1-4503-3669-7},
+  url =           {http://doi.acm.org/10.1145/2784731.2784741},
+}
+
+@inproceedings{cyclone-pldi,
+  author =        {Grossman, Dan and Morrisett, Greg and Jim, Trevor and
+                   Hicks, Michael and Wang, Yanling and Cheney, James},
+  booktitle =     {PLDI},
+  title =         {{Region-based memory management in Cyclone}},
+  year =          {2002},
+  isbn =          {1581134630},
+  url =           {http://dl.acm.org/citation.cfm?id=512563},
+}
+
+@inproceedings{SessionTypesHonda,
+  address =       {London, UK, UK},
+  author =        {Honda, Kohei and Vasconcelos, Vasco Thudichum and
+                   Kubo, Makoto},
+  booktitle =     {Proceedings of the 7th European Symposium on
+                   Programming: Programming Languages and Systems},
+  pages =         {122--138},
+  publisher =     {Springer-Verlag},
+  series =        {ESOP '98},
+  title =         {Language Primitives and Type Discipline for
+                   Structured Communication-Based Programming},
+  year =          {1998},
+  isbn =          {3-540-64302-8},
+  url =           {http://dl.acm.org/citation.cfm?id=645392.651876},
+}
+
+@inproceedings{accelerate-icfp13,
+  author =        {McDonell, Trevor L. and Chakravarty, Manuel M.T. and
+                   Keller, Gabriele and Lippmeier, Ben},
+  booktitle =     {ICFP: International Conference on Functional
+                   Programming},
+  pages =         {49--60},
+  publisher =     {ACM},
+  title =         {Optimising Purely Functional {GPU} Programs},
+  year =          {2013},
+}
+
+@inproceedings{delite,
+  author =        {Brown, Kevin J. and Sujeeth, Arvind K. and
+                   Lee, Hyouk Joong and Rompf, Tiark and Chafi, Hassan and
+                   Odersky, Martin and Olukotun, Kunle},
+  booktitle =     {Proceedings of the 2011 International Conference on
+                   Parallel Architectures and Compilation Techniques},
+  pages =         {89--100},
+  publisher =     {IEEE},
+  series =        {PACT '11},
+  title =         {A Heterogeneous Parallel Framework for
+                   Domain-Specific Languages},
+  year =          {2011},
+}
+
+@article{obsidian-cacm,
+  author =        {Svensson, Bo Joel and Sheeran, Mary and
+                   Newton, Ryan R.},
+  journal =       {Commun. ACM},
+  month =         jun,
+  number =        {6},
+  pages =         {56--63},
+  publisher =     {ACM},
+  title =         {Design Exploration Through Code-generating DSLs},
+  volume =        {57},
+  year =          {2014},
+}
+
+@inproceedings{gray2000n,
+  author =        {Gray, Alexander G and Moore, Andrew W},
+  booktitle =     {NIPS},
+  organization =  {Citeseer},
+  pages =         {521--527},
+  title =         {N-Body'problems in statistical learning},
+  volume =        {4},
+  year =          {2000},
+}
+
+@article{popov07,
+  author =        {Stefan Popov and Johannes G{\"u}nther and
+                   Hans-Peter Seidel and Philipp Slusallek},
+  editor =        {Daniel Cohen-Or and Pavel Slav{\'\i}k},
+  journal =       {Computer Graphics Forum},
+  month =         sep,
+  note =          {(Proceedings of Eurographics)},
+  number =        {3},
+  pages =         {415--424},
+  title =         {Stackless KD-Tree Traversal for High Performance
+                   {GPU} Ray Tracing},
+  volume =        {26},
+  year =          {2007},
+}
+
+@inproceedings{hapala11,
+  author =        {Michael Hapala and Tomas Davidovic and Ingo Wald and
+                   Vlastimil Havran and Philipp Slusallek},
+  booktitle =     {{Proceedings} {27th} {Spring} {Conference} {of}
+                   {Computer} {Graphics} {(SCCG)} {2011}},
+  pages =         {29--34},
+  title =         {{Efficient} {Stack-less} {BVH} {Traversal} {for}
+                   {Ray} {Tracing}},
+  year =          {2011},
+}
+
+@article{cilk,
+  address =       {New York, NY, USA},
+  author =        {Blumofe, Robert D. and Joerg, Christopher F. and
+                   Kuszmaul, Bradley C. and Leiserson, Charles E. and
+                   Randall, Keith H. and Zhou, Yuli},
+  journal =       {SIGPLAN Notices},
+  month =         {August},
+  pages =         {207--216},
+  publisher =     {ACM},
+  title =         {Cilk: an efficient multithreaded runtime system},
+  volume =        {30},
+  year =          {1995},
+  doi =           {http://doi.acm.org/10.1145/209937.209958},
+  issn =          {0362-1340},
+  url =           {http://doi.acm.org/10.1145/209937.209958},
+}
+
+@article{bentley75,
+  author =        {Bentley, Jon Louis},
+  journal =       {Commun. ACM},
+  month =         {September},
+  pages =         {509--517},
+  title =         {Multidimensional binary search trees used for
+                   associative searching},
+  volume =        {18},
+  year =          {1975},
+  doi =           {http://doi.acm.org/10.1145/361002.361007},
+  issn =          {0001-0782},
+  url =           {http://doi.acm.org/10.1145/361002.361007},
+}
+
+@proceedings{DBLP:conf/cgo/2013,
+  publisher =     {{IEEE} Computer Society},
+  title =         {Proceedings of the 2013 {IEEE/ACM} International
+                   Symposium on Code Generation and Optimization, {CGO}
+                   2013, Shenzhen, China, February 23-27, 2013},
+  year =          {2013},
+  biburl =        {http://dblp.uni-trier.de/rec/bib/conf/cgo/2013},
+  isbn =          {978-1-4673-5524-7},
+  url =           {http://ieeexplore.ieee.org/xpl/mostRecentIssue.jsp?
+                  punumber=6489844},
+}
+
+@article{mlkit-retrospective,
+ author = {Tofte, Mads and Birkedal, Lars and Elsman, Martin and Hallenberg, Niels},
+ title = {A Retrospective on Region-Based Memory Management},
+ journal = {Higher Order Symbol. Comput.},
+ issue_date = {September 2004},
+ volume = {17},
+ number = {3},
+ month = sep,
+ year = {2004},
+ issn = {1388-3690},
+ pages = {245--265},
+ numpages = {21},
+ url = {https://doi.org/10.1023/B:LISP.0000029446.78563.a4},
+ doi = {10.1023/B:LISP.0000029446.78563.a4},
+ acmid = {993040},
+ publisher = {Kluwer Academic Publishers},
+ address = {Hingham, MA, USA},
+ keywords = {Standard ML, dynamic storage management, regions},
+}
+
+
+@inproceedings{repmax-Meyerovich,
+author = {Meyerovich, Leo A. and Mytkowicz, Todd and Schulte, Wolfram},
+title = {Data Parallel Programming for Irregular Tree Computations},
+booktitle = {HotPAR},
+year = {2011},
+month = {May},
+publisher = {USENIX},
+url = {https://www.microsoft.com/en-us/research/publication/data-parallel-programming-for-irregular-tree-computations/},
+address = {},
+pages = {},
+journal = {},
+volume = {},
+chapter = {},
+isbn = {},
+}
+
+@article{repmax-Bird,
+ author = {Bird, R. S.},
+ title = {Using Circular Programs to Eliminate Multiple Traversals of Data},
+ journal = {Acta Inf.},
+ issue_date = {October   1984},
+ volume = {21},
+ number = {3},
+ month = oct,
+ year = {1984},
+ issn = {0001-5903},
+ pages = {239--250},
+ numpages = {12},
+ url = {http://dx.doi.org/10.1007/BF00264249},
+ doi = {10.1007/BF00264249},
+ acmid = {2697826},
+ publisher = {Springer-Verlag New York, Inc.},
+ address = {Secaucus, NJ, USA},
+}
+
+@inproceedings{destination-passing,
+ author = {Shaikhha, Amir and Fitzgibbon, Andrew and Peyton Jones, Simon and Vytiniotis, Dimitrios},
+ title = {Destination-passing Style for Efficient Memory Management},
+ booktitle = {Proceedings of the 6th ACM SIGPLAN International Workshop on Functional High-Performance Computing},
+ series = {FHPC 2017},
+ year = {2017},
+ isbn = {978-1-4503-5181-2},
+ location = {Oxford, UK},
+ pages = {12--23},
+ numpages = {12},
+ url = {http://doi.acm.org/10.1145/3122948.3122949},
+ doi = {10.1145/3122948.3122949},
+ acmid = {3122949},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {Array Programming, Destination-Passing Style},
+} 
+
+@article{linear-haskell,
+ author = {Bernardy, Jean-Philippe and Boespflug, Mathieu and Newton, Ryan R. and Peyton Jones, Simon and Spiwack, Arnaud},
+ title = {Linear Haskell: Practical Linearity in a Higher-order Polymorphic Language},
+ journal = {Proc. ACM Program. Lang.},
+ issue_date = {January 2018},
+ volume = {2},
+ number = {POPL},
+ month = dec,
+ year = {2017},
+ issn = {2475-1421},
+ pages = {5:1--5:29},
+ articleno = {5},
+ numpages = {29},
+ url = {http://doi.acm.org/10.1145/3158093},
+ doi = {10.1145/3158093},
+ acmid = {3158093},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {GHC, Haskell, laziness, linear logic, linear types, polymorphism, typestate},
+} 
+
+
+@inproceedings{xpath-streams,
+ author = {Mozafari, Barzan and Zeng, Kai and Zaniolo, Carlo},
+ title = {High-performance Complex Event Processing over XML Streams},
+ booktitle = {Proceedings of the 2012 ACM SIGMOD International Conference on Management of Data},
+ series = {SIGMOD '12},
+ year = {2012},
+ isbn = {978-1-4503-1247-9},
+ location = {Scottsdale, Arizona, USA},
+ pages = {253--264},
+ numpages = {12},
+ url = {http://doi.acm.org/10.1145/2213836.2213866},
+ doi = {10.1145/2213836.2213866},
+ acmid = {2213866},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {complex event processing, visibly pushdown automata, xml},
+}
+
+@inproceedings{wavescript-nsdi,
+ author = {Newton, Ryan R. and Toledo, Sivan and Girod, Lewis and Balakrishnan, Hari and Madden, Samuel},
+ title = {Wishbone: {P}rofile-based partitioning for sensornet applications},
+ booktitle = {Symposium on Networked Systems Design and Implementation},
+ year = {2009},
+ publisher = {USENIX Association},
+ series = {NSDI'09},
+ pages = {395--408},
+}
+
+@inproceedings{streamit,
+ author = {Thies, William and Karczmarek, Michal and Amarasinghe, Saman P.},
+ title = {StreamIt: A Language for Streaming Applications},
+ booktitle = {International Conference on Compiler Construction},
+ year = {2002},
+ publisher = {Springer-Verlag},
+}
+
+@inproceedings{ wadler-deforestation,
+    author = "P. Wadler",
+    title = {Deforestation: Transforming Programs to Eliminate Trees},
+    booktitle = "European Symposium on Programming",
+    publisher = "Berlin:\ Springer-Verlag",
+    pages = "344--358",
+    year = "1988",
+    url = "citeseer.ist.psu.edu/wadler90deforestation.html" }
+    
+
+@inproceedings{stream-fusion,
+author = {Coutts, Duncan and Leshchinskiy, Roman and Stewart, Don},
+title = {{Stream fusion: from lists to streams to nothing at all}},
+booktitle = {ICFP: International Conference on Functional Programming},
+year = {2007},
+publisher = {ACM},
+}
+pages = {315--326},
+address = {New York, NY, USA}
+
+
+@article{ornament-ml,
+ author = {Williams, Thomas and R{\'e}my, Didier},
+ title = {A Principled Approach to Ornamentation in ML},
+ journal = {Proc. ACM Program. Lang.},
+ issue_date = {January 2018},
+ volume = {2},
+ number = {POPL},
+ month = dec,
+ year = {2017},
+ issn = {2475-1421},
+ pages = {21:1--21:30},
+ articleno = {21},
+ numpages = {30},
+ url = {http://doi.acm.org/10.1145/3158109},
+ doi = {10.1145/3158109},
+ acmid = {3158109},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {Dependent Types, Logical Relations, ML, Ornaments, Refactoring},
+}
+
+@article{ornaments,
+  title={Ornamental algebras, algebraic ornaments},
+  author={McBride, Conor},
+  journal={Journal of functional programming},
+  year={2010}
+}
+
+@article{persistent-java,
+ author = {Atkinson, M. P. and Dayn\`{e}s, L. and Jordan, M. J. and Printezis, T. and Spence, S.},
+ title = {An Orthogonally Persistent Java},
+ journal = {SIGMOD Rec.},
+ issue_date = {Dec. 1996},
+ volume = {25},
+ number = {4},
+ month = dec,
+ year = {1996},
+ issn = {0163-5808},
+ pages = {68--75},
+ numpages = {8},
+ url = {http://doi.acm.org/10.1145/245882.245905},
+ doi = {10.1145/245882.245905},
+ acmid = {245905},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+}
+
+@article{persistent-object-systems,
+ author = {Atkinson, Malcolm and Morrison, Ronald},
+ title = {Orthogonally Persistent Object Systems},
+ journal = {The VLDB Journal},
+ issue_date = {July 1995},
+ volume = {4},
+ number = {3},
+ month = jul,
+ year = {1995},
+ issn = {1066-8888},
+ pages = {319--402},
+ numpages = {84},
+ url = {http://dl.acm.org/citation.cfm?id=615224.615226},
+ acmid = {615226},
+ publisher = {Springer-Verlag New York, Inc.},
+ address = {Secaucus, NJ, USA},
+ keywords = {database programming languages, orthogonal persistence, persistent application systems, persistent programming languages},
+}
+
+@inproceedings{persistent-objects-thor,
+ author = {Liskov, B. and Adya, A. and Castro, M. and Ghemawat, S. and Gruber, R. and Maheshwari, U. and Myers, A. C. and Day, M. and Shrira, L.},
+ title = {Safe and Efficient Sharing of Persistent Objects in Thor},
+ booktitle = {Proceedings of the 1996 ACM SIGMOD International Conference on Management of Data},
+ series = {SIGMOD '96},
+ year = {1996},
+ isbn = {0-89791-794-4},
+ location = {Montreal, Quebec, Canada},
+ pages = {318--329},
+ numpages = {12},
+ url = {http://doi.acm.org/10.1145/233269.233346},
+ doi = {10.1145/233269.233346},
+ acmid = {233346},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+}
+
+@Inbook{Napier88,
+author="Morrison, Ron
+and Connor, Richard
+and Kirby, Graham
+and Munro, David
+and Atkinson, Malcolm P.
+and Cutts, Quintin
+and Brown, Fred
+and Dearie, Alan",
+editor="Atkinson, Malcolm P.
+and Welland, Ray",
+title="The Napier88 Persistent Programming Language and Environment",
+bookTitle="Fully Integrated Data Environments: Persistent Programming Languages, Object Stores, and Programming Environments",
+year="2000",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="98--154",
+abstract="Persistent programming systems are designed as an implementation technology for long lived, concurrently accessed and potentially large bodies of data and programs, known here as persistent application systems (PASs). Within a PAS the persistence concept is used to abstract over the physical properties of data such as where it is kept, how long it is kept and in what form it is kept. As such it is seen as having a number of benefits in simplifying the task of PAS programming. Here, we describe the integrated design of the Napier88 persistent programming system and how Napier88 may be used to develop PASs.",
+isbn="978-3-642-59623-0",
+doi="10.1007/978-3-642-59623-0_6",
+url="https://doi.org/10.1007/978-3-642-59623-0_6"
+}
+
+
+@inproceedings{object-fault-handling,
+ author = {Hosking, Antony L. and Moss, J. Eliot B.},
+ title = {Object Fault Handling for Persistent Programming Languages: A Performance Evaluation},
+ booktitle = {Proceedings of the Eighth Annual Conference on Object-oriented Programming Systems, Languages, and Applications},
+ series = {OOPSLA '93},
+ year = {1993},
+ isbn = {0-89791-587-9},
+ location = {Washington, D.C., USA},
+ pages = {288--303},
+ numpages = {16},
+ url = {http://doi.acm.org/10.1145/165854.165907},
+ doi = {10.1145/165854.165907},
+ acmid = {165907},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+}
