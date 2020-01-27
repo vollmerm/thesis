@@ -1,0 +1,132 @@
+
+%\usepackage[usenames,dvipsnames]{xcolor}
+%\usepackage[dvipsnames]{xcolor}
+%\usepackage[]{xcolor}
+
+% [2016.10.23] Switching to margin notes for peanut gallery:
+\usepackage{todonotes}
+% \presetkeys{todonotes}{inline}{}  % Activate to turn-off margin notes.
+
+% [2016.05.26] This can just be a growing list from paper to paper:
+\newcommand{\rn}[1]{\pgwrapper{RRN}{#1}}  % Ryan Newton
+
+\newcommand{\tlm}[1]{\pgwrapper{TLM}{#1}} % Trevor
+\newcommand{\bjs}[1]{\pgwrapper{BJS}{#1}} % Bo Joel Svenson
+\newcommand{\chc}[1]{\pgwrapper{CHC}{#1}} % Chao-Hong Chen
+\newcommand{\vc}[1]{\pgwrapper{VC}{#1}} % Vikraman Choudhury
+\newcommand{\bc}[1]{\pgwrapper{BC}{#1}} % Buddhika Chamith
+\newcommand{\mv}[1]{\pgwrapper{MV}{#1}} % Michael Vollmer
+\newcommand{\osa}[1]{\pgwrapper{OSA}{#1}} % Omer Agacan
+\newcommand{\mm}[1]{\pgwrapper{MM}{#1}} % Madan Musuvathi
+\newcommand{\rgs}[1]{\pgwrapper{RGS}{#1}} % Ryan Scott
+\newcommand{\csk}[1]{\pgwrapper{CSK}{#1}} % Chaitanya Koparkar
+
+\newcommand{\mk}[1]{\pgwrapper{MK}{#1}} % Milind Kulkarni
+\newcommand{\ls}[1]{\pgwrapper{LS}{#1}} % Laith Sakka
+
+\newcommand{\spall}[1]{\pgwrapper{SS}{#1}} % Sarah Spall
+
+\newcommand{\jd}[1]{\pgwrapper{JD}{#1}} % Joe Devietti
+\newcommand{\onl}[1]{\pgwrapper{ONL}{#1}} % Omar Navarro-Leija
+
+\newcommand{\mr}[1]{\pgwrapper{MR}{#1}} % Mike Rainey
+
+% Add co-authors here or in a downstream file.
+
+\InputIfFileExists{activateeditingmarks}{
+}{
+    \def\noeditingmarks{}
+}
+
+\definecolor{comment-red}{rgb}{0.8,0,0}
+\definecolor{dark-green}{rgb}{0.0,0.4,0}
+\definecolor{dark-blue}{rgb}{0.0,0.0,0.55}
+\definecolor{very-dark-green}{rgb}{0.0,0.3,0}
+
+\ifx\noeditingmarks\undefined
+   %% This means someone else should take a look:
+   \newcommand{\auditme}[1]{{\color{dark-green}{#1}}}
+
+   %% This meants there's a serious problem that must be fixed before
+   %% the paper goes out:
+   \newcommand{\fixme}[1]{{\color{comment-red}{#1}}}
+
+   %% This is for outlining, i.e., psuedotext that must be converted
+   %% to real text:
+   \newcommand{\note}[1]{{\begin{itemize}\item \textcolor{blue}{NOTE: #1} \end{itemize}}}
+
+   %% A very poor-man's version of ``track changes'':
+   \newcommand{\new}[1]{{\color{blue}{#1}}}
+
+   \newcommand{\const}[1]{\textred{#1}}
+   %\definecolor{mygrey}{rgb}{0.6,0.6,0.6}
+   \definecolor{mygrey}{rgb}{0.7,0.7,0.7}
+
+   \newcommand{\textred}[1]{{\color{comment-red}{#1}}}
+
+   % Old version was inline:   
+   % \newcommand{\pgwrapper}[2]{\textred{(#1: #2)}}
+   % New version is in the margin:
+   \setlength{\marginparwidth}{1.6cm}
+   \newcommand{\pgwrapper}[2]{\todo[size=\scriptsize]{#1: #2}}
+
+   %% RRN: Dim the background for Ryan's eyes:
+   %% Hack: do this ONLY on Ryan's machine.
+   %%  I don't know a way based on user or host name, so...
+   %%  instead I just signal on a file, activategreybg.tex which I
+   %%  don't then checkin.
+   \InputIfFileExists{activategreybg}{
+       \definecolor{comment-red}{rgb}{0.5,0,0}
+       \pagecolor{mygrey}
+   }{}
+
+  % When they are their own para, todonotes annoyingly take up vertical space:
+  \newcommand{\rnfloat}[1]{\pgwrapper{RRN}{#1}\vspace{-4mm}}  % Ryan Newton
+
+\else
+%   \newcommand{\textred}[1]{#1}
+% Keep it on so we catch stuff to fix:
+   \newcommand{\textred}[1]{{\color{comment-red}{#1}}}
+   \newcommand{\auditme}[1]{#1}
+   % This is more severe and should not go away:
+   \newcommand{\fixme}[1]{\textred{#1}}
+   \newcommand{\pgwrapper}[2]{}
+%   \newcommand{\note}[1]{}
+   \newcommand{\note}[1]{{\begin{itemize}\item {\textcolor{blue}{#1}} \end{itemize}}}
+   % \newcommand{\new}[1]{#1}
+   \newcommand{\new}[1]{{\color{blue}{#1}}}
+   \newcommand{\const}[1]{#1}
+
+   \newcommand{\rnfloat}[1]{}  % Ryan Newton
+\fi
+
+% Just an alias because sometimes we use this:
+\newcommand{\Red}[1]{\textred{#1}}
+
+% These probable should be elsewhere:
+\newcommand{\ie}{{i.e.,}}
+\newcommand{\eg}{{e.g.,}}
+\newcommand{\etal}{\textit{et al.}}
+
+\def\scrunchit{}
+\ifx\scrunchit\undefined
+  \newcommand{\captionscrunch}{}
+\else
+%  \newcommand{\captionscrunch}{\vspace{-4mm}}
+  \newcommand{\captionscrunch}{\vspace{-3mm}}
+\fi
+
+%% \newcommand{\secref}[1]{section~\ref{#1}}
+%% \newcommand{\Secref}[1]{Section~\ref{#1}}
+\newcommand{\secref}[1]{\S\ref{#1}}
+\newcommand{\Secref}[1]{\secref{#1}}
+
+%% \newcommand{\Figref}[1]{Figure~\ref{#1}}
+%% \newcommand{\figref}[1]{figure~\ref{#1}}
+\newcommand{\Figref}[1]{Fig.~\ref{#1}}
+\newcommand{\figref}[1]{Fig.~\ref{#1}}
+\newcommand{\tabref}[1]{Table~\ref{#1}}
+
+
+\newcommand{\appendixref}[1]{\ref{#1}}
+\newcommand{\Appendixref}[1]{\ref{#1}}

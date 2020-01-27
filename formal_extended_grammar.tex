@@ -1,0 +1,11 @@
+\begin{displaymath}
+  \begin{aligned}
+    \textup{Typing Env.} && \TENV && \gramdef & \; \set{\var_1 \mapsto \hTYP_1, \; \ldots \; , \var_n \mapsto \hTYP_n} \\
+    \textup{Store Typing} && \SENV && \gramdef & \; \set{\locreg{\loc}{r_1}_1 \mapsto \TYP_1, \; \ldots \; , \locreg{\loc}{r_n}_n \mapsto \TYP_n} \\      
+    \textup{Constraint Env.} && \CENV && \gramdef & \;
+      \set{\locreg{\loc}{r_1}_1 \mapsto \LE_1, \; \ldots \; , \locreg{\loc}{r_n}_n \mapsto \LE_n} \\
+    \textup{Allocation Pointers} && \AENV && \gramdef & \; \set{r_1 \mapsto ap_1, \; \ldots \; , r_n \mapsto ap_n} \\
+    && && & {\text{where} \; ap = \locreg{\loc}{\reg} \gramor \emptyset} \\
+    \textup{Nursery} && \NENV && \gramdef & \; \set{\locreg{\loc}{r_1}_1, \; \ldots \; , \locreg{\loc}{r_n}_n}
+  \end{aligned}
+\end{displaymath}

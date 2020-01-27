@@ -11,7 +11,7 @@
     \TENV';\SENV';\CENV;\AENV';\NENV' \vdash \AENV'';\NENV'';\EXPR_2 : \tyatlocreg{\TYP_2}{\loc_2}{\reg_2}}
                    {\TENV;\SENV;\CENV;\AENV;\NENV \vdash \AENV''; \NENV''; \letpack{\var : \tyatlocreg{\TYP_1}{\loc_1}{\reg_1}}{\EXPR_1}{\EXPR_2} : \tyatlocreg{\TYP_2}{\loc_2}{\reg_2} 
     \\\\{ \begin{aligned}
-          \\[-4mm] \text{where} \;
+          \text{where} \;
           & \; \TENV' = \TENV \cup \set{\var \mapsto \tyatlocreg{\TYP_1}{\loc_1}{\reg_1}} ;
           \;   \SENV' = \SENV \cup \set{\locreg{\loc_1}{\reg_1} \mapsto \TYP_1}
           \end{aligned}
@@ -22,7 +22,7 @@
 \newcommand{\rtlregion}{
   \inferrule*[lab={\;\text{[\tlregion]}}]{\TENV;\SENV;\CENV;\AENV';\NENV \vdash \AENV''; \NENV'; \EXPR : \hTYP}{\TENV;\SENV;\CENV;\AENV;\NENV \vdash \AENV''; \NENV'; \letreg{\sreg}{\sEXPR} : \hTYP
     \\\\{ \begin{aligned}
-          \\[-4mm] \text{where} \;
+          \text{where} \;
           \AENV'= \AENV \cup \set{\reg \mapsto \emptyset}
           \end{aligned}
         }
@@ -32,7 +32,6 @@
 \newcommand{\rtllstart}{
   \inferrule*[lab={\;\text{[\tllstart]}}]{\AENV(\reg)=\emptyset \\ \locreg{\loc}{\reg} \not \in \NENV'' \\ \locreg{\loc'}{\reg'} \neq \locreg{\loc}{\reg} \\ \TENV;\SENV;\CENV';\AENV';\NENV' \vdash \AENV'';\NENV'';\EXPR : \tyatlocreg{\TYP'}{\loc'}{\reg'}}{\TENV;\SENV;\CENV;\AENV;\NENV \vdash \AENV''; \NENV''; \letloc{\locreg{\loc}{\reg}}{\startr{\reg}}{\EXPR} : \tyatlocreg{\TYP'}{\loc'}{\reg'}
     \\\\ {\begin{aligned}
-            \\[-4mm]
             \text{where} \; 
             \; \CENV' = \CENV \cup \set{\locreg{\loc}{\reg} \mapsto \startr{r}} ;
             \; \AENV' = \AENV \cup \set{\reg \mapsto \locreg{\loc}{\reg}} ; \\
@@ -44,7 +43,6 @@
 \newcommand{\rtlltag}{
   \inferrule*[lab={\;\text{[\tlltag]}}]{\AENV(\reg)=\locreg{\loc'}{\reg} \\ \locreg{\loc'}{\reg} \in \NENV \\ \locreg{\loc}{\reg} \not \in \NENV'' \\ \locreg{\loc}{\reg} \neq \locreg{\loc''}{\reg''} \\\\ \TENV;\SENV;\CENV';\AENV';\NENV' \vdash \AENV'';\NENV'';\EXPR : \tyatlocreg{\TYP''}{\loc''}{\reg''}}{\TENV;\SENV;\CENV;\AENV;\NENV \vdash \AENV''; \NENV''; \letloc{\locreg{\loc}{\reg}}{(\locreg{\loc'}{r} + 1)}{\EXPR} : \tyatlocreg{\TYP''}{\loc''}{\reg''}
   \\\\{\begin{aligned}
-         \\[-4mm]
          \text{where} \;
          \; \CENV' = \CENV \cup \set{\locreg{\loc}{\reg} \mapsto (\locreg{\loc'}{\reg} + 1)} ;
          \; \AENV' = \AENV \cup \set{\reg \mapsto \locreg{\loc}{\reg}} ; \\
@@ -58,7 +56,6 @@
 \newcommand{\rtllafter}{
   \inferrule*[lab={\;\text{[\tllafter]}}]{\AENV(\reg)=\locreg{\loc_1}{\reg} \\ \SENV(\locreg{\loc_1}{\reg}) = \TYP' \\ \locreg{\loc_1}{\reg} \not \in \NENV \\ \locreg{\loc}{\reg} \not \in \NENV'' \\ \locreg{\loc}{\reg} \neq \locreg{\loc'}{\reg'} \\\\ \TENV;\SENV;\CENV';\AENV';\NENV' \vdash \AENV'';\NENV'';\EXPR : \tyatlocreg{\TYP'}{\loc'}{\reg'}}{\TENV;\SENV;\CENV;\AENV;\NENV \vdash \AENV''; \NENV''; \letloc{\locreg{\loc}{\reg}}{\afterl{\tyatlocreg{\TYP'}{\loc_{1}}{\reg}}}{\EXPR} : \tyatlocreg{\TYP'}{\loc'}{\reg'}
   \\\\{\begin{aligned}
-         \\[-4mm]
          \text{where} \;
          \; \CENV' = \CENV \cup \set{\locreg{\loc}{\reg} \mapsto \afterl{\tyatlocreg{\TYP'}{\loc_{1}}{\reg}}} ;
          \; \AENV' = \AENV \cup \set{\reg \mapsto \locreg{\loc}{\reg}} ; \\
@@ -76,7 +73,6 @@
  \TENV;\SENV;\CENV;\AENV;\NENV \vdash \AENV;\NENV;\overharpoon{\VAL_{\ind}} : \overharpoon{\tyatlocreg{\TYP_{\ind}'}{\loc_{\ind}}{\reg}}
  }{\TENV;\SENV;\CENV;\AENV;\NENV \vdash \AENV';\NENV'; \datacon{\DC}{\locreg{\loc}{\reg}}{\overharpoon{\VAL}} : \tyatlocreg{\TYP}{\loc}{\reg}
  \\\\{\begin{aligned}
-        \\[-4mm]
         \text{where} \;
         & \; \AENV' = \AENV \cup \set{\reg \mapsto \locreg{\loc}{\reg}} ;
           \; \NENV' = \NENV - \set{\locreg{\loc}{\reg}} \\[-2mm]
@@ -101,7 +97,6 @@
             \ARROW \tyatlocreg{\TYP}{\loc}{\reg};
     \fvar \overharpoon{\var} = \EXPR
     \\\\{\begin{aligned}
-            \\[-4mm]
             \text{where} \;
             & \; \TENV = \set{\overharpoon{\var_1} \mapsto \overharpoon{{\tyatlocreg{\TYP_1}{\loc_1}{\reg_1}}}, \; \ldots \; , \overharpoon{\var_n} \mapsto \overharpoon{{\tyatlocreg{\TYP_n}{\loc_n}{\reg_n}}}}\\[-2mm]
             & \; \SENV = \set{\overharpoon{\locreg{\loc_1}{\reg_1}} \mapsto \overharpoon{\TYP_1}, \; \ldots \; , \overharpoon{\locreg{\loc_n}{\reg_n}} \mapsto \overharpoon{\TYP_n}} \\[-2mm]
@@ -118,7 +113,6 @@
    { \tcfun \overharpoon{\FD} \\
     \TENV;\SENV;\CENV;\AENV;\NENV \vdash \AENV';\NENV';\EXPR:\tyatlocreg{\TYP}{\loc}{\reg}}
    {\vdash_{prog} \AENV';\NENV';\overharpoon{\DD} \;; \overharpoon{\FD} \;; \EXPR : \tyatlocreg{\TYP}{\loc}{\reg} \\\\{\begin{aligned}
-          \\[-4mm]
             \text{where} \;
             & \; \TENV = \emptyset ;
               \; \SENV = \emptyset \\[-2mm]
@@ -139,7 +133,6 @@
     }{\TENV;\SENV;\CENV;\AENV;\NENV \vdash \AENV;\NENV';
       \fapp{\overharpoon {\locreg{\loc'}{\reg'}}}{\overharpoon{\VAL} : \tyatlocreg{\TYP}{\loc}{\reg}}
      \\\\{\begin{aligned}
-            \\[-4mm]
             \text{where} \;
             & \; \fvar : \forall _{\overharpoon{\locreg{\loc''}{r''}}}.
             \overharpoon{\tyatlocreg{\TYP_i}{\loc'''_i}{\reg'''_i}} \ARROW \tyatlocreg{\TYP}{\loc'''}{\reg'''} ; (\fvar \overharpoon{\var} = \EXPR) = Function(f)\\[-2mm]
@@ -161,7 +154,6 @@
      {\TENV;\SENV;\CENV;\AENV;\NENV \vdash \AENV';\NENV';
       \case{\VAL}{\overharpoon{\pat} : \hTYP}
       \\\\{\begin{aligned}
-             \\[-4mm]
              \text{where} \;
                \; \litnum = |\overharpoon{\pat}| ;
                \; \ind \in \set{1, \; \ldots \; , \litnum}
@@ -177,7 +169,6 @@
      {\TYP'';\TENV;\SENV;\CENV;\AENV;\NENV \tcpat \AENV';\NENV';
      \caseclause{\datacon{\DC}{}{(\overharpoon{\var : \tyatlocreg{\TYP'}{\loc'}{\reg'}})}}{\EXPR} : \tyatlocreg{\TYP}{\loc}{\reg}
      \\\\{\begin{aligned}
-            \\[-4mm]
             \text{where} \;
             & \; \TENV' = \TENV \cup \set{\overharpoon{\var_1} \mapsto \overharpoon{\TYP'_1} \ensuremath{@} \overharpoon{{\loc_1'}^{\reg'}}, \; \ldots \; , \overharpoon{\var_n} \mapsto \overharpoon{\TYP'_n} \ensuremath{@} \overharpoon{{\loc_n'}^{\reg'}}}\\[-2mm]
             & \; \SENV' = \SENV \cup \set{\overharpoon{\locreg{\loc_1'}{\reg'}} \mapsto \overharpoon{\TYP'_1}, \; \ldots \; , \overharpoon{\locreg{\loc_n'}{\reg'}} \mapsto \overharpoon{\TYP'_n}} \\[-2mm]
