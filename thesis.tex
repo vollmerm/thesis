@@ -224,13 +224,13 @@ and \lstinline[mathescape]{rightmost} above.  First, in the source language with
 %% \floatstyle{plain}\restylefloat{figure}
 %% \begin{figure}
 %% \centering
-\begin{lstlisting}[language=Haskell]
+\begin{code}
 buildtree : Int -> Tree
 buildtree n = if n == 0
               then Leaf 1
               else Node (buildtree (n - 1))
                         (buildtree (n - 1))
-\end{lstlisting}
+\end{code}
 %% \vspace{-1mm}
 %% \caption{Example: Building an output data structure}
 %% \label{fig:buildtree}
@@ -244,7 +244,7 @@ Then in {\ourcalc}, where the type scheme binds an output rather than input loca
 %\floatstyle{boxed}\restylefloat{figure}
 %\begin{figure}[h]
 %\centering
-\begin{lstlisting}[language=Haskell]
+\begin{code}
 buildtree : forall @\locreg{l}{r}@ . Int -> @\tyatlocreg{Tree}{l}{r}@
 buildtree [@\locreg{l}{r}@] n =
   if n == 0 then (Leaf @\locreg{l}{r}@ 1) -- write tag + int to output 
@@ -260,7 +260,7 @@ buildtree [@\locreg{l}{r}@] n =
            buildtree [@\locreg{l_b}{r}@] (n - 1) in
        -- write datacon tag, connecting things together:
        (Node @\locreg{l}{r}@ left right)
-  \end{lstlisting}
+  \end{code}
 %\end{figure}
 %\vspace{-3mm}
 
@@ -1001,13 +1001,13 @@ The program can start taking evaluation steps from this configuration.
 %
 Consider this code snippet of \ourcalc{}.
 %
-\begin{lstlisting}[language=Haskell]
+\begin{code}
 letloc @$\locreg{l_1}{\reg}$@ = @$\locreg{l_0}{\reg}$@ + 1 in
 let a : @\tyatlocreg{Tree}{l_1}{r}@ = (Leaf @$\locreg{l_1}{\reg}$@) in
 letloc @$\locreg{l_2}{\reg}$@ = (after (@\tyatlocreg{Tree}{l_1}{r}@)) in
 let b : @\tyatlocreg{Tree}{l_2}{r}@ = (Leaf @$\locreg{l_2}{\reg}$@) in
 Node @$\locreg{l_0}{\reg}$@ a b
-\end{lstlisting}
+\end{code}
 %
 Assume that the store starts out with a fresh heap, $\STOR = \set{\reg
   \mapsto \emptyset}$ and the location $\locreg{l_0}{\reg}$ maps to
@@ -1199,9 +1199,9 @@ generalizes straightforwardly and the changes preserve type safety.
 
 In datatype annotations each field can be marked to store its offset in the constructor {\em
   or} be represented by an indirection pointer (currently not both):
-\begin{lstlisting}[language=Haskell]
+\begin{code}
 data T = K1 T (Ind T) | K2 T (Offset T) | K3 T
-\end{lstlisting}
+\end{code}
 Type annotations would also be the place to express {\em permutations} on fields
 that should be serialized in a different order, (e.g., postorder).  But it is
 equivalent to generating \ourcalc with reordered fields in the source program.
