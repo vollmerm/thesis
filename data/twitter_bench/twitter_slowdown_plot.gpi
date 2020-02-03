@@ -1,0 +1,29 @@
+#!/usr/bin/env gnuplot
+
+load "../common_styles.gpi"
+
+set datafile separator ","
+set key top right noreverse enhanced autotitles nobox
+
+set key font ",14"
+
+set xtics font ",14"
+set ytics font ",14"
+
+set xlabel "Megabytes of JSON data" font ",14"
+set ylabel "Factor slow down relative to Gibbon" font ",14"
+
+set grid ytics lc rgb "#bbbbbb" lw 2 lt 0
+set grid xtics lc rgb "#bbbbbb" lw 2 lt 0
+
+set log x
+
+set terminal pdfcairo
+set output "./twitter_slowdown_plot.pdf"
+
+plot \
+     "rapidjson_parser_compare.csv" using ($7 / $14) title "RapidJSON(parser)" with linespoints ls 1, \
+     "rapidjson_reader_compare.csv" using ($7 / $14) title "RapidJSON(lexer)" with linespoints ls 2, \
+     "cnf_compare.csv" using ($7 / $14) title 'CNF' with linespoints ls 3, \
+     "capnproto_compare.csv" using ($7 / $14) title "Cap'n Proto" with linespoints ls 4, \
+     1 title "" lw 2 lc rgb "#000000"

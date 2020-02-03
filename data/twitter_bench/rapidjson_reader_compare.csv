@@ -1,0 +1,7 @@
+cutter01, data_1, 1.0M, rapidjson(reader), 9, 1.0M, 0.007233,cutter01, data_1, 1.0M, gibbon2, 9, 259014 bytes, 0.000572
+cutter01, data_8, 8.0M, rapidjson(reader), 9, 8.0M, 0.053780,cutter01, data_8, 8.0M, gibbon2, 9, 2082741 bytes, 0.005039
+cutter01, data_16, 16M, rapidjson(reader), 9, 16M, 0.092707,cutter01, data_16, 16M, gibbon2, 9, 4149584 bytes, 0.009515
+cutter01, data_64, 64M, rapidjson(reader), 9, 64M, 0.262478,cutter01, data_64, 64M, gibbon2, 9, 16192261 bytes, 0.037971
+cutter01, data_256, 256M, rapidjson(reader), 9, 256M, 0.807515,cutter01, data_256, 256M, gibbon2, 9, 65506162 bytes, 0.143248
+cutter01, data_512, 512M, rapidjson(reader), 9, 512M, 1.522949,cutter01, data_512, 512M, gibbon2, 9, 130598454 bytes, 0.234517
+cutter01, data_1024, 1024M, rapidjson(reader), 9, 1024M, 2.939244,cutter01, data_1024, 1024M, gibbon2, 9, 256911754 bytes, 0.392476

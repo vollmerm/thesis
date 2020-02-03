@@ -1,0 +1,7 @@
+cutter01, data_1, 1.0M, CNF, 9, 2129920 bytes, 4.26e-4,cutter01, data_1, 1.0M, gibbon2, 9, 259014 bytes, 0.000572
+cutter01, data_8, 8.0M, CNF, 9, 17039360 bytes, 6.622e-3,cutter01, data_8, 8.0M, gibbon2, 9, 2082741 bytes, 0.005039
+cutter01, data_16, 16M, CNF, 9, 34242560 bytes, 1.922e-2,cutter01, data_16, 16M, gibbon2, 9, 4149584 bytes, 0.009515
+cutter01, data_64, 64M, CNF, 9, 134643712 bytes, 8.058e-2,cutter01, data_64, 64M, gibbon2, 9, 16192261 bytes, 0.037971
+cutter01, data_256, 256M, CNF, 9, 539492352 bytes, 0.321485,cutter01, data_256, 256M, gibbon2, 9, 65506162 bytes, 0.143248
+cutter01, data_512, 512M, CNF, 9, 1072365568 bytes, 0.641094,cutter01, data_512, 512M, gibbon2, 9, 130598454 bytes, 0.234517
+cutter01, data_1024, 1024M, CNF, 9, 2117632000 bytes, 1.260105,cutter01, data_1024, 1024M, gibbon2, 9, 256911754 bytes, 0.392476

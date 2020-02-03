@@ -1,0 +1,7 @@
+cutter01, data_1, 1.0M, capnproto, 9, 732160, 0.002597,cutter01, data_1, 1.0M, gibbon2, 9, 259014 bytes, 0.000572
+cutter01, data_8, 8.0M, capnproto, 9, 5878616, 0.020279,cutter01, data_8, 8.0M, gibbon2, 9, 2082741 bytes, 0.005039
+cutter01, data_16, 16M, capnproto, 9, 11731240, 0.039877,cutter01, data_16, 16M, gibbon2, 9, 4149584 bytes, 0.009515
+cutter01, data_64, 64M, capnproto, 9, 46071976, 0.124699,cutter01, data_64, 64M, gibbon2, 9, 16192261 bytes, 0.037971
+cutter01, data_256, 256M, capnproto, 9, 185553128, 0.340132,cutter01, data_256, 256M, gibbon2, 9, 65506162 bytes, 0.143248
+cutter01, data_512, 512M, capnproto, 9, 370056168, 0.600982,cutter01, data_512, 512M, gibbon2, 9, 130598454 bytes, 0.234517
+cutter01, data_1024, 1024M, capnproto, 9, 734714968, 1.118239,cutter01, data_1024, 1024M, gibbon2, 9, 256911754 bytes, 0.392476
