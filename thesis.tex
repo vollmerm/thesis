@@ -1215,13 +1215,57 @@ Words.
 
 \section{Data Processing Benchmarks}
 
+\subsection{Twitter JSON Benchmark}
+
+For a real data set, we
+use Twitter metadata consisting of user ID's and hashtags for all tweets posted
+in 1 month, and count the occurrences of the hashtag ``cats'' in this dataset.
+Here we seek to replicate and extend the CNF experiment reported by
+\cite{cnf-icfp15}.
+
+The dataset is stored on disk in JSON format, and we use RapidJSON
+v1.1.0 ({\footnotesize\url{http://rapidjson.org/}}) as a performance baseline: a widely
+recognized fast C++ JSON library.
+%
+In \figref{fig:twitter_slowdown_plot}, we vary the amount of data processed,
+up to 1GB.  (For each data-point, taking the median of 9 trials
+ensures the data is already in the Linux disk cache.)
+%
+For fairness, all versions read the data via a single \il{mmap} call, plus
+demand paging.
+
+There are two RapidJSON versions. The ``lexer'' version never constructs an
+object representing a parsed tweet, rather, it is a state-machine
+that is able to count ``cats'' while tokenizing, {\em without parsing}.  It is
+optimized to be as fast as possible for this particular JSON schema, with no
+error detection (a non-compliant input would give silent failures and wrong
+answers).
+%
+The ``parser'' version represents a more traditional and idiomatic situation use
+of the library: calling the \il{.Parse()} method to produce a DOM object, and
+then accessing its fields.
+%
+We have structured this benchmark to maximally advantage this parsing approach:
+the 9,111,741 tweets processed in the rightmost data points of \figref{fig:twitter_slowdown_plot} are stored as one JSON object each, on each line of the input file.
+%
+Thus the data only needs to be read into memory once, and in a single pass the RapidJSON benchmark reads, parses, discards, and repeats.
+%
+Conversely, if the tweets were instead stored as a single JSON array, filling
+the entire input file, then RapidJSON would have to parse the entire file
+(writing the DOM tree out to memory, overflowing last level cache), then read
+that same tree back into memory in a second pass to count hashtags.
+%
+Nevertheless, in spite of this single-pass advantage, our compiler achieves
+6$\times$ and 12$\times$ speedup over RapidJSON lexer/parser.
+%
+We process the 9.1M tweets in 0.39s.
 
 
 \begin{figure}
   \centering
-  \includegraphics[width=.8\linewidth]{data/twitter_bench/twitter_slowdown_plot}
+  \input{twitter_slowdown_plot}
   \caption{Twitter data processing benchmark results}
-  \label{fig:bench_twitter}
+  \label{fig:twitter_slowdown_plot}
 \end{figure}
 
 \section{Abstract Syntax Trees}
@@ -1232,7 +1276,7 @@ Words.
 
 \addcontentsline{toc}{chapter}{Bibliography}
 
-\bibliographystyle{alpha}
+\bibliographystyle{acm}
 %\include{your_bibliography_name.tex}
 \bibliography{refs}
 

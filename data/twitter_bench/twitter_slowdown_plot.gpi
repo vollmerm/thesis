@@ -1,14 +1,16 @@
 #!/usr/bin/env gnuplot
 
+cd data_dir
+
 load "../common_styles.gpi"
 
 set datafile separator ","
-set key top right noreverse enhanced autotitles nobox
+set key above noreverse enhanced autotitles nobox
 
-set key font ",14"
+# set key font ",14"
 
-set xtics font ",14"
-set ytics font ",14"
+# set xtics font ",14"
+# set ytics font ",14"
 
 set xlabel "Megabytes of JSON data" font ",14"
 set ylabel "Factor slow down relative to Gibbon" font ",14"
@@ -18,12 +20,12 @@ set grid xtics lc rgb "#bbbbbb" lw 2 lt 0
 
 set log x
 
-set terminal pdfcairo
-set output "./twitter_slowdown_plot.pdf"
+set terminal epslatex size 6,3 color colortext font ',14'
+set output "twitter_slowdown_plot.tex"
 
 plot \
-     "rapidjson_parser_compare.csv" using ($7 / $14) title "RapidJSON(parser)" with linespoints ls 1, \
-     "rapidjson_reader_compare.csv" using ($7 / $14) title "RapidJSON(lexer)" with linespoints ls 2, \
-     "cnf_compare.csv" using ($7 / $14) title 'CNF' with linespoints ls 3, \
-     "capnproto_compare.csv" using ($7 / $14) title "Cap'n Proto" with linespoints ls 4, \
+     "rapidjson_parser_compare.csv" using 3:($7 / $14) title "JSON Parser" with linespoints ls 1, \
+     "rapidjson_reader_compare.csv" using 3:($7 / $14) title "JSON Lexer" with linespoints ls 2, \
+     "cnf_compare.csv" using 3:($7 / $14) title 'CNF' with linespoints ls 3, \
+     "capnproto_compare.csv" using 3:($7 / $14) title "Cap'n Proto" with linespoints ls 4, \
      1 title "" lw 2 lc rgb "#000000"
