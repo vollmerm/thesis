@@ -30,10 +30,10 @@
 }
 
 \newcommand{\rtllstart}{
-  \inferrule*[lab={\;\text{[\tllstart]}}]{\AENV(\reg)=\emptyset \\ \locreg{\loc}{\reg} \not \in \NENV'' \\ \locreg{\loc'}{\reg'} \neq \locreg{\loc}{\reg} \\ \TENV;\SENV;\CENV';\AENV';\NENV' \vdash \AENV'';\NENV'';\EXPR : \tyatlocreg{\TYP'}{\loc'}{\reg'}}{\TENV;\SENV;\CENV;\AENV;\NENV \vdash \AENV''; \NENV''; \letloc{\locreg{\loc}{\reg}}{\startr{\reg}}{\EXPR} : \tyatlocreg{\TYP'}{\loc'}{\reg'}
+  \inferrule*[lab={\;\text{[\tllstart]}}]{\AENV(\reg)=\emptyset \\ \locreg{\loc}{\reg} \not \in \NENV'' \\ \locreg{\loc'}{\reg'} \neq \locreg{\loc}{\reg} \\\\ \TENV;\SENV;\CENV';\AENV';\NENV' \vdash \AENV'';\NENV'';\EXPR : \tyatlocreg{\TYP'}{\loc'}{\reg'}}{\TENV;\SENV;\CENV;\AENV;\NENV \vdash \AENV''; \NENV''; \letloc{\locreg{\loc}{\reg}}{\startr{\reg}}{\EXPR} : \tyatlocreg{\TYP'}{\loc'}{\reg'}
     \\\\ {\begin{aligned}
             \text{where} \; 
-            \; \CENV' = \CENV \cup \set{\locreg{\loc}{\reg} \mapsto \startr{r}} ;
+            \; \CENV' = \CENV \cup \set{\locreg{\loc}{\reg} \mapsto \startr{r}} \\
             \; \AENV' = \AENV \cup \set{\reg \mapsto \locreg{\loc}{\reg}} ; \\
             \; \NENV' = \NENV \cup \set{\locreg{\loc}{\reg}}
           \end{aligned}}
@@ -44,7 +44,7 @@
   \inferrule*[lab={\;\text{[\tlltag]}}]{\AENV(\reg)=\locreg{\loc'}{\reg} \\ \locreg{\loc'}{\reg} \in \NENV \\ \locreg{\loc}{\reg} \not \in \NENV'' \\ \locreg{\loc}{\reg} \neq \locreg{\loc''}{\reg''} \\\\ \TENV;\SENV;\CENV';\AENV';\NENV' \vdash \AENV'';\NENV'';\EXPR : \tyatlocreg{\TYP''}{\loc''}{\reg''}}{\TENV;\SENV;\CENV;\AENV;\NENV \vdash \AENV''; \NENV''; \letloc{\locreg{\loc}{\reg}}{(\locreg{\loc'}{r} + 1)}{\EXPR} : \tyatlocreg{\TYP''}{\loc''}{\reg''}
   \\\\{\begin{aligned}
          \text{where} \;
-         \; \CENV' = \CENV \cup \set{\locreg{\loc}{\reg} \mapsto (\locreg{\loc'}{\reg} + 1)} ;
+         \; \CENV' = \CENV \cup \set{\locreg{\loc}{\reg} \mapsto (\locreg{\loc'}{\reg} + 1)} \\
          \; \AENV' = \AENV \cup \set{\reg \mapsto \locreg{\loc}{\reg}} ; \\
          \; \NENV' = \NENV \cup \set{\locreg{\loc}{\reg}}
        \end{aligned}
@@ -57,7 +57,7 @@
   \inferrule*[lab={\;\text{[\tllafter]}}]{\AENV(\reg)=\locreg{\loc_1}{\reg} \\ \SENV(\locreg{\loc_1}{\reg}) = \TYP' \\ \locreg{\loc_1}{\reg} \not \in \NENV \\ \locreg{\loc}{\reg} \not \in \NENV'' \\ \locreg{\loc}{\reg} \neq \locreg{\loc'}{\reg'} \\\\ \TENV;\SENV;\CENV';\AENV';\NENV' \vdash \AENV'';\NENV'';\EXPR : \tyatlocreg{\TYP'}{\loc'}{\reg'}}{\TENV;\SENV;\CENV;\AENV;\NENV \vdash \AENV''; \NENV''; \letloc{\locreg{\loc}{\reg}}{\afterl{\tyatlocreg{\TYP'}{\loc_{1}}{\reg}}}{\EXPR} : \tyatlocreg{\TYP'}{\loc'}{\reg'}
   \\\\{\begin{aligned}
          \text{where} \;
-         \; \CENV' = \CENV \cup \set{\locreg{\loc}{\reg} \mapsto \afterl{\tyatlocreg{\TYP'}{\loc_{1}}{\reg}}} ;
+         \; \CENV' = \CENV \cup \set{\locreg{\loc}{\reg} \mapsto \afterl{\tyatlocreg{\TYP'}{\loc_{1}}{\reg}}} \\
          \; \AENV' = \AENV \cup \set{\reg \mapsto \locreg{\loc}{\reg}} ; \\
          \; \NENV' = \NENV \cup \set{\locreg{\loc}{\reg}}
        \end{aligned}

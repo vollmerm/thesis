@@ -512,15 +512,15 @@ an \emph{address} in the store.
   \label{fig:typegrammar}
 \end{figure}
 \begin{figure}
-  \small
+  \footnotesize
   \begin{mathpar}
-    \rtvar{}
+    \rtvar{}\hspace{1em}
     \rtconcreteloc{}\\
-    \rtlet{}
+    \rtlet{}\hspace{1em}
     \rtlregion{}\\
-    \rtlltag{}\\
+    \rtlltag{}\hspace{1em}
     \rtllstart{}\\
-    \rtllafter{}
+    \rtllafter{}\hspace{1em}
     \rtdatacon{}
   \end{mathpar}
   \normalsize
@@ -530,13 +530,13 @@ an \emph{address} in the store.
 
 %\floatstyle{boxed}\restylefloat{figure}
 \begin{figure}
-  \small
+  \footnotesize
   \begin{mathpar}
-   \rtapp{}\\
-   \rtcase{}
-   \rtpat{}\\
-   \rtfunctiondef{}
-   \rtprogram{}
+    \rtapp{}\hspace{1em}
+    \rtfunctiondef{}\\
+    \rtpat{}\\
+    \rtcase{}\hspace{1em}
+    \rtprogram{}
   \end{mathpar}
   \normalsize
    \caption{Typing judgments for \ourcalc{} (2)}
@@ -842,26 +842,17 @@ Node $\locreg{l}{r}$ x y
     \rdletloctag{}
     
     \rdletlocafter{}\\
-    \rdcase{}  
-  \end{mathpar}
-  \normalsize
-  \caption{Dynamic semantics rules for \ourcalc{} (1)}
-  \label{fig:dynamic1}
-\end{figure}
 
-\begin{figure}
-  \small
-  \begin{mathpar}
-    \mprset{flushleft}
     \rdletexp{}\\
     \rdletval{}
     
     \rdletregion{}\\
-    \rdapp{}
+    \rdapp{}\\
+    \rdcase{}\\
   \end{mathpar}
   \normalsize
-  \caption{Dynamic semantics rules for \ourcalc{} (2)}
-  \label{fig:dynamic2}
+  \caption{Dynamic semantics rules for \ourcalc{}}
+  \label{fig:dynamic}
 \end{figure}
   
 
@@ -1213,9 +1204,8 @@ Words.
 
 \section{Compiling the Location Calculus} \label{sec:impl-local}
 
-\section{Evaluation}
 
-\chapter{Serialized Abstract Syntax Trees}
+\chapter{Applications and Evaluation}
 
 Words.
 
