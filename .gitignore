@@ -2,4 +2,11 @@
 *.log
 *.aux
 *.toc
+*.bbl
+*.fls
+*.out
+*.thm
+*.blg
+*.fdb_latexmk
 thesis.pdf
+*-eps-converted-to.pdf
