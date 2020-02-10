@@ -1644,6 +1644,66 @@ We process the 9.1M tweets in 0.39s.
 \note{Summarize Laith's point correlation benchmark (from ECOOP
   paper), updating the language to match the new terminology from
   LoCal.}
+Point correlation  is a well-known algorithm used in data mining~\cite{gray2000n}:
+given a set of points in a k-dimensional space, point correlation computes the number of points in that space  that lie within a
+distance $r$ from a given point $p$. 
+
+% Rather than comparing each point in the space to the query point, one efficient way of searching such spaces is to store them in kd-trees~\cite{bentley75}. KD-trees are space-partitioning trees where the root of the kd tree represents the entire space, and each node's children represents a partition of that node's space into two subspaces.
+
+% A kd-tree is a binary space-partitioning tree that in its simplest form  splits the space at each internal node into two sub-spaces
+% around a split axes in one of the space dimensions, the left subtree stores the points to the left of the split access
+% and the right subtree sotres the points to the right of the split access, the split axes alternates between the dimensions of
+% the space at each level of the tree, when the number of the points in the subtree is one, a leaf node that stores
+% that point is constructed.
+
+
+In a naive implementation of point correlation, each point in the space needs
+to be checked against the query point. 
+A more efficient approach is to use kd-trees~\cite{bentley75} to store the
+points. KD-trees are space-partitioning trees where the root of the kd tree represents the entire space, and each node's children represents a partition of that node's space into two subspaces.
+KD-trees allow the search
+process to skip some regions in the space. By storing at each internal node
+the boundaries within which all descendent points lies, the search process can
+skip a subtree is a given point is far enough from the boundaries. As a
+result, querying a kd-tree to perform point-correlation is $O(log\; n)$ instead
+of $O(n)$. Note that it is exactly the process of ``skipping'' subtrees that
+gives kd-tree-based point correlation its efficiency, but also that prevents a
+normal packed representation from sufficing to implement the algorithm: there
+is no way to skip past a subtree without performing a dummy traversal,
+obviating the asymptotic performance gains.
+
+We implemented both a standard pointer-based version of 2-point correlation in
+C, as well as a version that operates over a packed representation augmented
+with indirection pointers. Each interior node stores a rope-style
+indirection pointer that maintains the size of its child subtrees. If a
+traversal is truncated at that node, the cursor is incremented by the value in
+that indirection pointer, skipping the subtrees and resuming traversal on the
+rest of the tree.
+
+\figref{fig:point_corr_plot} shows the speedup of the packed version
+with respect to the standard pointer-based implementation for
+different tree sizes. For each tree size, we ran 10 query points
+through the tree. For small trees, the queries were performed 10000
+times to produce sufficient runtime for accurate measurements. Each
+experiment was performed 10 times, and the mean is reported.
+
+For every tree size, the packed representation uses 56\% less memory
+than the pointer-based trees. This reduction in memory usage has two
+sources: nodes do not need to store left-child pointers; and more
+efficient packing of data in the packed representation. For small
+trees, the runtime performance of the packed and pointer versions are
+comparable. For large trees, the packed version is up to 35\% faster
+than the pointer-based version. 
+
+%% The relatively smaller performance improvement for this
+%% benchmark versus the AST benchmarks is unsurprising. First, taking an
+%% indirection means that any spatial locality gains from the packed
+%% representation are lost, resulting in similar behavior to the
+%% pointer-based version. Second, there is relatively more work to be
+%% done per node in this benchmark, so the time spent in traversal of the
+%% tree is relatively less, reducing the opportunity for improvement.
+
+
 \note{Update plot (ideally use gnuplot and eps latex output, to look
   nice and consistent with other plots).}
 
@@ -1664,21 +1724,327 @@ We process the 9.1M tweets in 0.39s.
 
 
 
-\addcontentsline{toc}{chapter}{Bibliography}
-
-\bibliographystyle{acm}
-%\include{your_bibliography_name.tex}
-\bibliography{refs}
-
-\newpage
+%% \newpage
 
 % \appendix command is necessary to change chapter numbering.
 % Appendices are optional
 
 \appendix
 
+\chapter{Formalization and Type Safety Proof}
+
+\section{Variables and Substitution}
+%
+We use the convention that all variables for binding values,
+locations, and regions are distinct, and maintain this invariant
+implicitly.
+%
+The bindings sites of variables are summarized by the following:
+%
+\begin{itemize}
+\item Variables for binding values $\var$ are bound by function definitions
+$\FD$ and pattern matches $\pat$.
+
+\item Location variables $\locreg{\loc}{\reg}$ are bound by type schemes $\TS$, pattern matches
+$\pat$, and $\keywd{letloc}$ binders.
+
+\item Region variables $\reg$ are bound by type schemes $\TS$, pattern
+matches $\pat$, and $\keywd{letregion}$ binders.
+\end{itemize}
+%
+The use sites of variables are summarized by the following:
+\begin{itemize}
+\item Variables for binding varlues $\var$ are used by values $\VAL$.
+
+\item Location variables $\locreg{\loc}{\reg}$ are used by concrete locations $\concreteloc{\reg}{\ind}{\locreg{\loc}{\reg}}$,
+the argument list of function applications
+$\fapp{\overharpoon{\locreg{l}{r}}}{\overharpoon{\VAL}}$, the location
+argument of constructor applications
+$\datacon{\DC}{\keywd{\locreg{\loc}{\reg}}}{\overharpoon{\VAL}}$,
+located types $\hTYP$, and located expressions $\LE$.
+
+\item Region varaibles $\reg$ are used in the same places as location variables.
+\end{itemize}
+%
+We use the following conventions for variable substitution:
+%
+\begin{itemize}
+\item $\subst{\EXPR}{x}{v}$: Substitute $v$ for $x$ in $e$. We let the notation extend to vectors such that
+$\subst{\EXPR}{\overharpoon{x}}{\overharpoon{v}}$ denotes the iterated substitution $\subst{\EXPR}{\overharpoon{x_1}}{\overharpoon{v_1}} \ldots \subst{}{\overharpoon{x_n}}{\overharpoon{v_n}}$, where $n = |\overharpoon{x}| = |\overharpoon{v}|$.
+
+\item $\subst{\EXPR}{\locreg{\loc_1}{\reg_1}}{\locreg{\loc_2}{\reg_2}}$: Substitute location variable $\locreg{\loc_2}{\reg_2}$ for $\locreg{\loc_1}{\reg_1}$ in $\EXPR$. We extend this notation to vectors of locations in the same fashion, as described above.
+
+\item $\subst{\EXPR}{\reg_1}{\reg_2}$ : Substitute region variable $\reg_2$ for $\reg_1$ in $\EXPR$. We extend this notation to vectors of locations in the same fashion, as described above.
+
+\item Finally, we extend the aforementioned notation so that
+  substitution can act on environments $\CENV$, $\AENV$, and $\NENV$,
+  e.g.,
+  $\subst{\CENV}{\locreg{\loc_1}{\reg_1}}{\locreg{\loc_2}{\reg_2}}$.
+\end{itemize}
 
 
+\section{Global Environments and Metafunctions}
+
+\begin{itemize}
+\item $Function(f)$: An environment that maps a function $f$ to its definition $\FD$.
+
+\item $Freshen(\FD)$: A metafunction that freshens all bound variables in function definition
+$\FD$ and returns the resulting function definition.
+
+\item $TypeOfCon(\DC):$ An environment that maps a data constructor to its type.
+
+\item $TypeOfField(\DC,i)$: A metafunction that returns the type of the \il{i}'th field
+of data constructor $\DC$.
+
+\item $ArgTysOfConstructor(\DC)$: An environment that maps a data constructor to its field types.
+
+\item $\allocptr{\reg}{\STOR}$: $\max \set{-1} \cup \set{ \indj \; | \; {(\reg \mapsto (\indj \mapsto \DC)) \in \STOR}}$.
+\end{itemize}
+
+\section{Well-formedness of the Store}
+\label{sec:well-formedness}
+
+The well formedness of the store is defined by the top-level judgement
+\begin{displaymath}
+\storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}
+\end{displaymath}
+whose definition itself uses three other judgements.
+%
+All of these judgements are summarized in Table~\ref{tbl:swf-judgements}.
+
+%\floatstyle{boxed}\restylefloat{table}
+\begin{table}
+\bgroup
+\def\arraystretch{1.2}
+\setlength\tabcolsep{0.5cm}
+\begin{tabular}{lclp{6cm}}
+ & \textbf{Judgement form} & \textbf{Section} &\textbf{Summary}
+ \\\\
+\parbox[t]{3.5cm}{Store \\ well formedness} & $\storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}$ &
+\ref{sec:well-formedness} &
+The store $\STOR$ along with location map $\MENV$ are well formed with respect to
+typing environments $\SENV$, $\CENV$, and $\AENV$.
+\\\\
+End witness & $\ewitness{\TYP}{\concreteloc{\reg}{\ind_{s}}{}}{\STOR}{\concreteloc{\reg}{\ind_{e}}{}}$ &
+\ref{sec:end-witness} &
+The store address $\concreteloc{\reg}{\ind_{e}}{}$ is the position one
+after the last cell of the tree of type $\TYP$ starting at
+$\concreteloc{\reg}{\ind_{s}}{}$ in store $\STOR$.
+\\\\
+\parbox[t]{3.5cm}{Constructor-application \\ well formedness}
+ & $\storewfcfa{\CENV}{\MENV}{\STOR}$ &
+\ref{sec:well-formedness-constructors} &
+All in-flight data-constructor applications in store $\STOR$ along with location map $\MENV$
+are well formed with respect to constructor-progress typing environment $\CENV$.
+\\\\
+\parbox[t]{3.5cm}{Allocation \\ well formedness} & $\storewfca{\AENV}{\NENV}{\MENV}{\STOR}$ &
+\ref{sec:well-formedness-allocation} &
+Allocation in store $\STOR$ along with location map $\MENV$ is well formed
+with respect to allocation-typing environments $\AENV$ and $\NENV$.
+\end{tabular}
+\egroup
+\caption{Summary of judgements used to establish well formedness of the store.}
+\label{tbl:swf-judgements}
+\end{table}
+
+\paragraph{Notation for references to well-formedness judgements}
+Because there are many requirements specified inside the various
+well-formedness judgements, we introduce notation for referring
+to requirements individually.
+%
+For example, the notation
+\refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc2}
+refers to the judgement
+\begin{align*}
+\storewfca{\AENV}{\NENV}{\MENV}{\STOR},
+\end{align*}
+specified in Section~\ref{sec:well-formedness-allocation},
+and in that judgement, rule number~\ref{wf:impl-linear-alloc2}.
+
+The definition of store well formedness follows.
+
+\paragraph{Judgement form}
+
+$\storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}$
+
+The well-formedness judgement specifies the valid layouts of the store by using the location
+map and the various environments from the typing judgement.
+%
+Rule~\ref{wf:map-store-consistency} specifies that, for each location in the store-typing environment,
+there is a corresponding concrete location in the location map and that concrete location satisfies
+a corresponding end-witness judgement.
+%
+Rules~\ref{wf:cfc} and~\ref{wf:ca} reference the judgements for well formedness concerning
+in-flight constructor applications (\secref{sec:end-witness}) and correct allocation in
+regions (\secref{sec:well-formedness-allocation}), respectively.
+%
+Finally, Rule~\ref{wf:impl1} specifies that the nursery and store-typing environments reference
+no common locations, which is a way of reflecting that each location is either in the process
+of being constructed and in the nursery, or allocated and in the store-typing environment, but
+never both.
+
+\paragraph{Definition}
+
+\begin{enumerate}
+
+    \item \label{wf:map-store-consistency} $ (\locreg{\loc}{\reg} \mapsto \TYP) \in \SENV \Rightarrow \\
+            ((\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind_1}{}) \in \MENV \wedge \\
+            \ewitness{\TYP}{\concreteloc{\reg}{\ind_1}{}}{\STOR}{\concreteloc{\reg}{\ind_2}{}})
+          $ 
+
+    \item \label{wf:cfc} $\storewfcfa{\CENV}{\MENV}{\STOR}$ 
+
+    \item \label{wf:ca} $\storewfca{\AENV}{\NENV}{\MENV}{\STOR}$
+
+    \item \label{wf:impl1} $dom(\SENV) \cap \NENV = \emptyset $
+\end{enumerate}
+
+\subsection{End-Witness judgement}
+\label{sec:end-witness}
+
+\paragraph{Judgement form}
+
+$\ewitness{\TYP}{\concreteloc{\reg}{\ind_{s}}{}}{\STOR}{\concreteloc{\reg}{\ind_{e}}{}}$
+
+The end-witness judgement specifies the expected layout in the store of a fully
+allocated data constructor.
+%
+Rule~\ref{ewitness:impl1} requires that the first cell store a constructor
+tag of the appropriate type.
+%
+Rule~\ref{ewitness:impl2} specifies the address of the cell one past the tag.
+%
+Rule~\ref{ewitness:impl3} recursively specifies the positions of the constructor
+fields.
+%
+Finally, Rule~\ref{ewitness:impl4} specifies that the end witness of
+the overall constructor is the address one past the end of either the
+tag, if the constructor has zero fields, or the final field,
+otherwise.
+
+\paragraph{Definition}
+
+\begin{enumerate}
+\item \label{ewitness:impl1} $\STOR(\reg)(\ind_s) = \DC'$ \; \text{such that} \\
+      $\; \DATA\;\TYP = \overharpoon{\DC_1 \; \overharpoon{\sTYP}_1\;} \; | \; \ldots \; | \; \DC' \; \overharpoon{\sTYP}' \; | \; \ldots \; | \; \overharpoon{\DC_m \; \overharpoon{\sTYP}_m\;}$
+
+\item \label{ewitness:impl4} $\overharpoon{w_0} = \ind_s + 1$
+
+\item \label{ewitness:impl2}
+  $\ewitness{\overharpoon{\TYP'_1}}{\concreteloc{\reg}{\overharpoon{w_0}}{}}{\STOR}{\concreteloc{\reg}{\overharpoon{w_1}}{}} \wedge$ \\
+  $\ewitness{\overharpoon{\TYP'_{j+1}}}{\concreteloc{\reg}{\overharpoon{w_j}}{}}{\STOR}{\concreteloc{\reg}{\overharpoon{w_{j+1}}}{}}$
+  \\ where $\indj \in \set{1,\ldots,n-1} ; n = | \overharpoon{\TYP'} |$
+
+\item \label{ewitness:impl3}
+  $\ind_e = \overharpoon{w_n}$
+\end{enumerate}
+
+\subsection{Well-formedness of constructor application}
+\label{sec:well-formedness-constructors}
+
+\paragraph{Judgement form}
+
+$\storewfcfa{\CENV}{\MENV}{\STOR}$
+
+The well-formedness judgement for constructor application specifies the various constraints
+that are necessary for ensuring correct formation of constructors, dealing with constructor
+application being an incremental process that spans multiple \ourcalc{} instructions.
+%
+Rule~\ref{wfconstr:constraint-start} specifies that, if a location corresponding to the
+first address in a region is in the constraint environment, then there is a corresponding
+entry for that location in the location map.
+%
+Rule~\ref{wfconstr:constraint-tag} specifies that, if a location corresponding to the address one past a constructor
+tag is in the constraint environment, then there are corresponding locations for the address
+of the tag and the address after in the location map.
+%
+Rule~\ref{wfconstr:constraint-after} specifies that, if a location corresponding to the address
+one past after a fully allocated constructor application is in the constraint environment,
+then there are corresponding locations for the address one past the constructor application
+and for the address of the start of that constructor application in the location map, as well as the existence
+of an end witness for that fully allocated location.
+
+\paragraph{Definition}
+
+\begin{enumerate}
+    \item \label{wfconstr:constraint-start} $ (\locreg{\loc}{\reg} \mapsto \startr{\reg}) \in \CENV \Rightarrow \\
+            (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{0}{}) \in \MENV $
+
+    \item \label{wfconstr:constraint-tag} $ (\locreg{\loc}{\reg} \mapsto (\locreg{\loc'}{\reg} + 1)) \in \CENV \Rightarrow
+            \\
+            (\locreg{\loc'}{\reg} \mapsto \concreteloc{\reg}{\ind_l}{})  \in \MENV \wedge \\
+            (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind_l + 1}{})  \in \MENV
+            $
+
+    \item \label{wfconstr:constraint-after} $ (\locreg{\loc}{\reg} \mapsto \afterl{\tyatlocreg{\TYP}{\locreg{\loc'}{\reg}}{\reg}}) \in \CENV \Rightarrow \\
+            ((\locreg{\loc'}{\reg} \mapsto \concreteloc{\reg}{\ind_1}{}) \in \MENV \wedge \\
+            \ewitness{\TYP}{\concreteloc{\reg}{\ind_1}{}}{\STOR}{\concreteloc{\reg}{\ind_2}{}} \wedge \\
+            (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind_2}{}) \in \MENV)
+            $
+
+\end{enumerate}
+
+\subsection{Well-formedness concerning allocation}
+\label{sec:well-formedness-allocation}
+
+\paragraph{Judgement form}
+
+$\storewfca{\AENV}{\NENV}{\MENV}{\STOR}$
+
+The well-formedness judgement for safe allocation specifies the various properties
+of the location map and store that enable continued safe allocation, avoiding in particular
+overwriting cells, which could, if possible, invalidate overall type safety.
+%
+Rule~\ref{wf:impl-linear-alloc} requires that, if a location is in both the allocation
+and nursery environments, i.e., that address represents an in-flight
+constructor application, then there is a corresponding location in the location
+map and the address of that location is the highest address in the store.
+%
+Rule~\ref{wf:impl-linear-alloc2} requires that, if there is an address in the allocation
+environment and that address is fully allocated, then the address of that location is the
+highest address in the store.
+%
+Rule~\ref{wf:impl-write-once} requires that, if there is an address in the nursery, then
+there is a corresponding location in the location map, but nothing at the corresponding
+address in the store.
+%
+Finally, Rule~\ref{wf:impl-empty-region} requires that, if there is a region that has been
+created but for which nothing has yet been allocated, then there can be no addresses
+for that region in the store.
+
+\paragraph{Definition}
+
+\begin{enumerate}
+    \item \label{wf:impl-linear-alloc} $ ((\reg \mapsto \locreg{\loc}{\reg}) \in \AENV \wedge \locreg{\loc}{\reg} \in \NENV) \Rightarrow \\
+          ((\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind}{}) \in \MENV \wedge
+%          \ind = \max \set{0} \cup \set{\indj \; | \; \concreteloc{\reg}{\indj}{} \in \MENV} \wedge \\
+          \ind > \allocptr{\reg}{\STOR})
+          $
+
+    \item \label{wf:impl-linear-alloc2} $ ((\reg \mapsto \locreg{\loc}{\reg}) \in \AENV \wedge 
+    \, (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind_s}{}) \in \MENV \wedge \locreg{\loc}{\reg} \not \in \NENV \wedge
+    \, \ewitness{\TYP}{\concreteloc{\reg}{\ind_s}{}}{\STOR}{\concreteloc{\reg}{\ind_e}{}}) \Rightarrow \\
+          \ind_e > \allocptr{\reg}{\STOR}
+          $
+
+    \item \label{wf:impl-write-once} $ \locreg{\loc}{\reg} \in \NENV \Rightarrow \\
+          ((\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind}{}) \in \MENV \wedge \\
+          (\reg \mapsto (\ind \mapsto \DC)) \not \in \STOR)
+          $
+
+    \item \label{wf:impl-empty-region} $(\reg \mapsto \emptyset) \in \AENV \Rightarrow \\
+    \reg \not \in dom(\STOR)$
+\end{enumerate}
+
+
+
+
+
+\addcontentsline{toc}{chapter}{Bibliography}
+
+\bibliographystyle{acm}
+%\include{your_bibliography_name.tex}
+\bibliography{refs}
 
 % Adds a line for your CV without a page number
 
