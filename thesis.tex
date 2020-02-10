@@ -1209,11 +1209,382 @@ Words.
 
 \chapter{Applications and Evaluation}
 
-Words.
+\note{General overview of the kinds of things we tested in Gibbon, how fast they were, etc.}
 
 \section{Microbenchmarks}
 
+See \tabref{tab:litmus-table}.
+
+We are
+% gibbon pointer cnf capn
+202 / 2.6 / 3.2 / 9.4  $\times$ geomean faster than
+Gibbon/NonPacked/CNF/CapNP respectively, and
+0.96 / 2.6 / 3.2 / 7.3 $\times$ faster for only apples-to-apples asymptotics.
+%% $3.2\times$,
+%% $9.4\times$, and
+%% $202\times$
+
+
+%% \tabref{tab:litmus-table} shows the results.
+
+\note{Re-write to either remove or better explain difference between Gibbon1 and Gibbon2.}
+      
+The column labeled ``Gibbon2'' shows performance of \lamadt programs
+(low-level \ourcalc control was not needed for any of these)
+using indirections and offsets, automatically.
+%
+``Gibbon1'' shows the approach described in \cite{ecoop17-gibbon}.
+%
+There are two major sources of overhead for our new approach versus Gibbon1:
+ 
+\begin{enumerate}
+\item Growable regions:
+In each case, our compiler starts with smaller, growable regions\footnote{starting at 64K bytes}, 
+which we require to create small output regions as
+in {\bf id} or {\bf treeInsert},
+but we suffer the overhead of bounds-checking. On the other hand,
+Gibbon always stores fully serialized data in huge regions.
+
+\item Likewise, we have found that the backend C compiler is sensitive to the number
+of cases in switch statements on data constructor tags (for instance, triggering
+the jump table heuristic).  By including the possibility that each tag we read
+may be a tagged indirection,
+% or end-of-chunk,
+we increase
+code size and increase the number of cases in our switch statements.
+\end{enumerate}
+
+
+However, the benchmarks where indirections and random-access offsets are important (id,
+rightmost, treeInsert, findMax) show a huge difference between Gibbon1 and Gibbon2,
+as we would expect based on Gibbon1
+requiring additional traversals to compile those functions.
+
+\paragraph{Versus pointer-based representations}
+The ``NonPacked'' approach is \ourcalc configured to always insert indirections
+and thus emulate a traditional object representation.
+% example of a traditional compilation approach
+% that use one heap object per data constructor.
+%
+In this case, we are being overly friendly to this pointer-based representation by
+allowing it to read its input (for example, the input tree to {\bf treeInsert})
+in an already-deserialized, pointer-based form.  A full apples-to-apples
+comparison would force the pointer-based version to deserialize the input
+message and reserialize the output; but we omit that here to focus only on the
+cost of the tree traversals themselves.
+%
+%% Similarly, the earlier Gibbon work compared a subset of these programs against a
+%% larger set of traditional compilers (Java, gcc, GHC, OCaml, MLton, Racket, Chez),
+%% finding those compilers performance on
+%% pointer-based inputs worse than the performance of lifted functions on
+%% serialized inputs.
+
+\paragraph{Versus competing libraries}
+
+%% The CNF representation is just the traditional Haskell heap representation of
+%% data constructors.  It wastes a word of header space for garbage collection
+%% purposes, and it uses full 64-bit absolute pointers between heap objects.
+%% The result is fast to read but not space efficient.
+%% This is visible on benchmarks such as {\bf sumTree}, where CNF out-performs
+%% Cap'N Proto by $3.5\times$.
+%% % (/ 0.96 0.27)
+%% Conversely, the Cap'N Proto representation is space efficient---using 40\% fewer
+%% bytes for the binary tree---and faster to build.
+%% % (- 1 (/ 805 1340.0))
+%% %
+%% CNF results are slow to build because they involve an extra copy: first to
+%% create the data on the normal heap, second to copy it into the compact region.
+%% This is why CNF's {\bf copyTree} is twice as fast as {\bf add1Leaves}, even
+%% though the both computations walk the tree and build a new output tree, copy is
+%% able to use a runtime system function to walk the data and copy directly from
+%% input message to output message, without allocating on the regular (non-compact)
+%% Haskell heap.
+
+The biggest differences in \tabref{tab:litmus-table} are due
+asymptotic complexity.
+However, for constant factor performance, we see the expected
+relationship---that our approach and Gibbon are faster than CNF and Cap'N Proto,
+sometimes by an order of magnitude, \eg\,{\bf add1Leaves}.
+
+CNF and Cap'N Proto encode some metadata in their serialization, to
+support the GHC runtime, and protocol evolution, respectively.
+On the other hand, 
+our compiler only uses offsets and tagged indirections
+when needed, and the size ratio of the encodings depends on how much these features are used.
+%
+For example, {\bf rightmost} uses a data-encoding that includes random-access
+offsets, and {\bf treeInsert} creates an output with a logarithmic number of
+tagged indirections.  Thus while our size advantage over CNF is
+%
+$4\times$ smaller
+% (/ 1340.0 335)
+%
+on {\bf buildTree}, it is only
+%
+$2.22\times$
+% (/ 1340.0 603)
+% (/ 1340000000.0 (+ 334000000 (* (- (expt 2 25) 1) 8)))
+%
+for {\bf rightmost}.
+% , and $XYZ\times$ for {\bf treeInsert}.
+
+CNF results are slow to build because they involve an extra copy: first to
+create the data on the normal heap, second to copy it into the compact region.
+This is why CNF's {\bf copyTree} is twice as fast as {\bf add1Leaves}, even
+though the both computations walk the tree and build a new output tree, copy is
+able to use a runtime system function to walk the data and copy directly from
+input message to output message, without allocating on the regular (non-compact)
+Haskell heap.
+
+\paragraph{Composing traversals}
+
+For offset-insertion, we allow the whole-program compiler to select the data
+representation based on what consuming functions are applied to it.
+%% In a more general setting (say, modular compilation, or messages received over
+%% the network from program in another language), we would need to adopt
+%% random-access nodes uniformly, which would, e.g., give {\bf leftmost} the same
+%% small amount of overhead in its input tree as {\bf rightmost}.
+In the presence of multiple functions traversing a single data structure,
+any function demanding random access changes the representation for all of them.
+% the ``weakest link'' determines how many random-access nodes are needed.
+% compiler uses a data representation required to optimize the slowest one.
+{\bf repMax} is one such example:
+%\begin{code}[mathescape=true]
+\il{ repMax t = propagateConst (findMax t) t}.
+%\end{code} \vspace{-5mm}
+%  repMax = propagateConst . findMax -- almost correct!
+% Consider the {\bf repMax} program in which
+Here {\bf findMax} only requires a partial scan (random access), but propagating
+that value requires a full traversal.  In this case, the compiler would add
+offsets to the datatype to ensure that `findMax' remains
+logarithmic.
+%
+However, this causes the subsequent traversal (propagateConst) to slow
+down, as it now has to unnecessarily skip over some extra bytes.  Likewise, if
+we do not include findMax in the whole program, the data remains fully
+serialized, which is why {\bf propagateConst} and {\bf findMax} run separately
+take less than 440ms, but run together take 480ms.  Yet the latter time is still
+6$\times$ and 9$\times$ faster, respectively, than CNF and Cap'N Proto!
+      
+
+
+ \begin{table*}
+  \begin{center}
+    \small
+      \begin{tabular}{ |c|c|c|c|c|c| }
+        \hline
+        Benchmark & Gibbon2 & Gibbon1 & NonPacked & CNF & CapnProto\hspace{-1mm} \\
+        \hline
+        % CNF: 100M iterations, calling NOINLINE id' function from NOINLINE rep.
+        %      That gives 8.0ns (Allowing rep to inline, but not ID, makes it 2.15ns)
+        % capnp: iter=20M median of 9 trials
+        % Gibbon2: 100M iterations
+
+        % Speedup:
+        % CNF: (/ 2.1 2.1) = 1
+        % CapnProto: (/ 129 2.1) = 61.42
+        % Gibbon1: 152380952
+        % Pointer: (/ 0.93 2.1) = 0.44
+        {\bf id}:
+        time, & 2.1ns &  0.32s  &  0.93ns &  2.1ns   & 129ns  \\
+        complexity   & $O(1)$   &  $O(N)$ & $O(1)$    &  $O(1)$  & $O(1)$  \\
+        %  output size (bytes)  &        &         &           &  8       &   8     \\
+        \hline
+
+        % CNF: 100M
+        % capnp: iters = 20M median of 9
+
+        % Speedup:
+        % CNF: (/ 44 17.0) = 2.58
+        % CapnProto: (/ 376 17.0) = 22.11
+        % Gibbon1: (/ 18.0 17.0) = 1.05
+        % Pointer: (/ 26 17.0) = 1.52
+        {\bf leftmost}:
+        time,        & 17ns         & 18ns        & 26ns        &    44ns      & 376ns            \\
+        complexity   & $O(log(N))$  & $O(log(N))$ & $O(log(N))$ & $O(log(N))$  & $O(log(N))$ \\
+        input size (bytes) & 335MB  & 335MB       & 335MB       &    1.34GB    & 805MB             \\
+        \hline
+
+        % CNF: 100M iterations
+        % capnpL iter=20M, median of 9 trials
+        % capnpL iter=20M, median of 9 trials
+        % Speedup:
+        % CNF: (/ 47 175.0) = 0.26
+        % CapnProto: (/ 482 175.0) = 2.75
+        % Gibbon1: 297142
+        % Pointer: (/ 19 175.0) = 0.108
+        {\bf rightmost}:
+        time,        & 175ns        & 56ms    & 19ns        &    47ns      & 482ns \\
+        complexity   & $O(log(N))$  & $O(N)$  & $O(log(N))$ & $O(log(N))$  & $O(log(N))$  \\
+        input size (bytes) & 603MB & 335MB    & 335MB       &    1.34GB    & 805MB            \\
+        \hline
+
+        %capn: median of 9 trails iter=1
+        % Speedup
+        % CNF: (/ 4.5 0.27) = 16.66
+        % CapnProto: (/ 1.8 0.27) = 6.66
+        % Gibbon1: (/ 0.24 0.27) = 0.88
+        % Pointer: (/ 2.7 0.27) = 10
+        {\bf buildTree}:
+        time,               & 0.27s     &  0.24s    & 2.7s &  4.5s  & 1.8s   \\
+        complexity,         & $O(N)$    &  $O(N)$   &  $O(N)$ & $O(N)$  &  $O(N)$ \\
+        output size (bytes) & 335MB     &  335MB    &  1.34GB &  1.34GB &  805MB       \\
+        \hline
+
+        % CNF: median of 9 trials:
+        % capnp: median of 9 trails iter=1
+        % Speedup:
+        % CapnProto: (/ 3.8 0.25) = 15.2
+        % CNF: (/ 2.7 0.25) = 10.8
+        % Gibbon1: (/ 0.24 0.25) = 0.96
+        % Pointer: (/ 3.1 0.25) = 12.4
+        {\bf add1Leaves}:
+        time,               & 0.25s     &  0.24s  & 3.1s     & 2.7s    &  3.8s  \\
+        complexity,         & $O(N)$    &  $O(N)$ & $O(N)$   & $O(N)$  &  $O(N)$ \\
+        \hline
+        % CNF: median of 9 trials:
+        % capn: median of 9 trails iter=1
+        % Speedup:
+        % CNF: (/ 0.27 0.095) = 2.84
+        % CapnProto: (/ 0.96 0.095) = 10.10
+        % Gibbon1: (/ 67.0 95) = 0.70
+        % Pointer: 8.5
+            {\bf sumTree}:
+            time,               & 95ms     & 67ms     & 0.81s   &  0.27s  &  0.96s  \\
+            complexity,         & $O(N)$   & $O(N)$   & $O(N)$  & $O(N)$  &  $O(N)$ \\
+            \hline
+            %capn: median of 9 trials iter =1
+            % Speedup:
+            % CNF: (/ 1.1 0.2) = 5.5
+            % CapnProto: (/ 1.9 0.2) = 9.4
+            % Gibbon1: (/ 0.24 0.2) = 1.2
+            % pointer: (/ 3.5 0.2) = 17.5
+                {\bf copyTree}:
+
+                time,               & 0.2s      & 0.24s   & 3.5s   &  1.1s   &  1.9s       \\
+                complexity,         & $O(N)$    & $O(N)$  & $O(N)$ & $O(N)$  &  $O(N)$ \\
+
+                \hline
+                \hline
+                % CNF: median of 9 iters
+                %capn: median of 9 trils iter=1
+                % Gibbon numbers: median of 9 trials
+                % Speedup:
+                % CNF: (/ 4.27 0.5) = 8.54
+                % CapnProto: (/ 2.1 0.5) = 4.2
+                % Gibbon1: (/ 0.49 0.5) = 0.98
+                % Pointer: (/ 2.96 0.5) = 5.92
+                    {\bf buildSearchTree}:
+
+                                    & 0.5s      & 0.49s     & 2.96s   &  4.27s   &  2.1s         \\
+                    complexity,          & $O(N)$    & $O(N)$    & $O(N)$  & $O(N)$   &  $O(N)$ \\
+                    output size (bytes)  & 603MB     & 603MB     & 1.61GB  &  1.61GB  &  805MB      \\
+
+                    \hline
+
+                    % CNF iters=1M
+                    % This one is 2.5us with iters=1000
+                    %            1.24us with iters=200K
+                    %            1.04us with iters=1M
+                    % NonPacked iters=1M
+                    %
+                    % capnp iters=20M median of 9
+                    % Speedup:
+                    % CNF: (/ 1 0.69) = 1.44
+                    % CapnProto: (/ 1.3 0.69) = 1.88
+                    % Gibbon: 144927
+                    % Pointer: (/ 0.92 0.69) = 1.33
+                    {\bf treeContains}:
+                    time,                & 0.69$\mu$s   & 0.1s  & 0.92$\mu$s  &  1$\mu$s    & 1.3$\mu$s \\
+                    complexity,          & $O(log(N))$ & $O(N)$ & $O(log(N))$ & $O(log(N))$ & $O(log(N))$ \\
+                    \hline
+
+                    % CNF iters=200K
+                    % Capn median of 9 , iter=1
+                    % Gibbon2 iters = 3500000
+                    % Speedup:
+                    % CNF: (/ 3.5 0.87) = 4.02
+                    % CapnProto: (/ 150 0.87) = 172.4
+                    % Gibbon: 436781
+                    % Pointer: (/ 2.5 0.87) = 2.87
+                    {\bf treeInsert}:
+
+                    time,                & 0.87$\mu$s  & 0.38s  & 2.5$\mu$s   &  3.5$\mu$s   &  150$\mu$s  \\
+                    complexity,          & $O(log(N))$ & $O(N)$ & $O(log(N))$ & $O(log(N))$  & $O(N)$  \\
+                    avg bytes added      & 677 bytes        &  603MB  & 856 bytes   &  848 bytes  & 805MB  \\
+                    \hline
+
+                    %capnp: median of 9 trails iters=1M
+                    {\bf InsertDestructive}:
+                                         &  NA   & NA   & NA   & NA  &  1.37$\mu$s       \\
+                    complexity,          &       &      &      &     & $O(log(N))$ \\
+
+                    \hline
+
+                    % Gibbon2:   100M iters
+                    % Gibbon1:   20 iters
+                    % Pointer:   100M iters
+                    % CNF:       100M iters
+                    % CapnProto: 1M iters
+                    % Speedup:
+                    % CNF: (/ 75 206.0) = 0.36
+                    % CapnProto: (/ 597 206.0) = 2.89
+                    % Gibbon: 427184
+                    % Pointer: (/ 41 206.0) = 0.199
+                    {\bf findMax}:
+                    time,                & 206ns        & 88ms    & 41ns        & 75ns         & 597ns        \\
+                    complexity           & $O(log(N))$  & $O(N)$  & $O(log(N))$ & $O(log(N))$  & $O(log(N))$  \\
+                    \hline
+
+                    % Speedup:
+                    % CNF: (/ 4.2 0.43) = 9.76
+                    % CapnProto: (/ 2.8 0.43) = 6.51
+                    % Gibbon: (/ 0.42 0.43) = 0.97
+                    % Pointer: (/ 3.3 0.43) = 7.67
+                    {\bf propagateConst}:
+                                         & 0.43s  &  0.42s  &  3.3s   & 4.2s   & 2.8s   \\
+                    complexity,          & $O(N)$ &  $O(N)$ &  $O(N)$ & $O(N)$ & $O(N)$  \\
+                    \hline
+
+                    % Speedup:
+                    % CNF: (/ 4.3 0.48) = 8.9
+                    % CapnProto: (/ 2.9 0.48) = 6.04
+                    % Gibbon: (/ 0.51 0.48) = 1.06
+                    % Pointer: (/ 3.2 0.48) = 6.67
+                    {\bf repMax}:
+                    time,                & 0.48s  & 0.51s   & 3.2s    & 4.3s    & 2.9s   \\
+                    complexity,          & $O(N)$ & $O(N)$  & $O(N)$  & $O(N)$  & $O(N)$  \\
+
+                    \hline
+      \end{tabular}
+    \end{center}
+  \vspace{-3mm}
+    \caption{Tree-processing functions operating on serialized data.
+      %% We are
+      %% % gibbon pointer cnf capn
+      %% 202 / 2.6 / 3.2 / 9.4  $\times$ geomean faster than
+      %% Gibbon/NonPacked/CNF/CapNP, and
+      %% 0.96 / 2.6 / 3.2 / 7.3 $\times$ faster for only apples-to-apples asymptotics.
+      %% %% $3.2\times$,
+      %% %% $9.4\times$, and
+      %% %% $202\times$
+      %% \captionscrunch{}
+    }
+    \label{tab:litmus-table}
+
+\end{table*}
+
+
 \section{Data Processing Benchmarks}
+
+\note{Overview of how this technique can be applied to data processing programs.}
+\note{If data to be processed is already serialized then this avoids marshaling cost.}
+\note{If data to be processed is in some other format then we can still be faster by
+  transforming the data into a format that is more efficient to process (like the JSON
+  to byte array transformation necessary for the Twitter benchmark). And in these cases
+  it is often still faster than libraries that are meant to process the data in its
+  original form.}
+ 
 
 \subsection{Twitter JSON Benchmark}
 
@@ -1268,9 +1639,28 @@ We process the 9.1M tweets in 0.39s.
   \label{fig:twitter_slowdown_plot}
 \end{figure}
 
+\subsection{Point Correlation}
+
+\note{Summarize Laith's point correlation benchmark (from ECOOP
+  paper), updating the language to match the new terminology from
+  LoCal.}
+\note{Update plot (ideally use gnuplot and eps latex output, to look
+  nice and consistent with other plots).}
+
+\begin{figure}
+  \centering
+  \includegraphics{data/point_corr/point_corr_perf}
+  \label{fig:point_corr_plot}
+  \caption{Speedup of packed implementation of point correlation over
+    pointer-based implementation. X axis shows varying tree sizes
+    (represented in number of nodes).}
+\end{figure}
+
 \section{Abstract Syntax Trees}
 
-
+\note{This is where my results for ASTs will eventually go.}
+\note{I can maybe put the Racket count nodes benchmark in here too, as a kind of
+  AST traversal.}
 
 
 
