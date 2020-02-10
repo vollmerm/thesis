@@ -1695,25 +1695,21 @@ trees, the runtime performance of the packed and pointer versions are
 comparable. For large trees, the packed version is up to 35\% faster
 than the pointer-based version. 
 
-%% The relatively smaller performance improvement for this
-%% benchmark versus the AST benchmarks is unsurprising. First, taking an
-%% indirection means that any spatial locality gains from the packed
-%% representation are lost, resulting in similar behavior to the
-%% pointer-based version. Second, there is relatively more work to be
-%% done per node in this benchmark, so the time spent in traversal of the
-%% tree is relatively less, reducing the opportunity for improvement.
+The relatively smaller performance improvement for this
+benchmark versus the Twitter benchmarks is unsurprising. First, taking an
+indirection means that any spatial locality gains from the packed
+representation are lost, resulting in similar behavior to the
+pointer-based version. Second, there is relatively more work to be
+done per node in this benchmark, so the time spent in traversal of the
+tree is relatively less, reducing the opportunity for improvement.
 
-
-\note{Update plot (ideally use gnuplot and eps latex output, to look
-  nice and consistent with other plots).}
 
 \begin{figure}
   \centering
-  \includegraphics{data/point_corr/point_corr_perf}
+  \input{point_corr_plot}
   \label{fig:point_corr_plot}
-  \caption{Speedup of packed implementation of point correlation over
-    pointer-based implementation. X axis shows varying tree sizes
-    (represented in number of nodes).}
+  \caption{Speedup of serialized implementation of point correlation versus
+    pointer-based implementation.}
 \end{figure}
 
 \section{Abstract Syntax Trees}

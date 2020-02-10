@@ -1,0 +1,13 @@
+#!/usr/bin/env gnuplot
+
+cd data_dir
+
+load "../common_styles.gpi"
+set key off
+set xlabel "Tree size (number of nodes)" font ",14"
+set ylabel "Speedup of serialized implementation" font ",14"
+set log x
+set yrange [0.5:1.5]
+set terminal epslatex size 6,3 color colortext font ',14'
+set output "point_corr_plot.tex"
+plot 'point_corr.dat' with linespoints ls 1
