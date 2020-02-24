@@ -123,7 +123,229 @@ This abstract page is required. Make sure to adhere to the word count and other 
 
 \chapter{Introduction}
 
-Words. Words.
+Many programs running today use heap object representations {\em fixed}
+by the language runtime system.
+% , which are not free to vary based on the workload.
+For instance, the Java or Haskell runtimes dictate an object layout, and the
+compiler must stick to it for all programs.
+%
+And yet when humans optimize a program, one of their primary {\em levers on
+performance} is changing data representation.  For example, an HPC programmer
+knows how to pack a regular tree into a byte array for more efficient access~\cite{makino90,goldfarb13sc,Meyerovich2011}.
+
+Whenever a program receives data from the network or disk, rigid
+insistence on a particular heap layout causes an impedance mismatch we know as
+{\em deserialization}.
+%
+%% \note{Compilers normally dictate a standard heap representation for data
+%%   manipulated by programs.  Yet substantial performance gains can be had by
+%%   operating on data directly in a denser format: the serialization format
+%%   already used by incoming data~\cite{}, or a custom format designed by the
+%%   programmer, as in HPC applications~\cite{}.}
+%
+Yet, the alternative would seem to be writing low-level code to deal directly
+with specialized or serialized data layouts.  This is error-prone, making it a
+``hacky'' way to achieve performance optimization at the expense of safety and
+readability.
+
+To ameliorate this tension we propose to reify {\em data layout} as an explicit
+part of the program.  We introduce a language, \ourcalc (which stands for {\em location
+  calculus}), whose type system directly encodes a byte-level
+layout for algebraic datatypes manipulated by the language.
+%
+A well-typed program consists of functions, data definitions, {\em and} 
+data representation choices, which
+% {Well-typed programs are self-describing with respect to their data-layout},
+% and that layout
+can then be tailored to an application.
+%
+This means that programs can operate over {\em densely}
+encoded (serialized) data in a type-safe way.
+%
+%% \rn{Somewhat related work: high-level synthesis (hardware) languages that
+%%    describe bit-level data using advanced type systems.}
+
+{If data resides on disk in a \ourcalc-compatible format}, it becomes
+possible to {\em bring the program to the data} rather than the traditional
+approach of bending the data to the code: deserializing it to match the rigid
+heap format of the language runtime.
+% Its type system ensures that \ourcalc working directly with densely encoded data, 
+{This effort contrasts with earlier work on persistent
+languages~\cite{persistent-java,persistent-objects-thor} and object databases~\cite{object-fault-handling},
+which sought to expand the mutable heap to encompass disk as well memory,
+translating (swizzling) between persistent pointers and in-memory pointers.  Instead, the
+emphasis here is on processing immutable data, and eschewing pointers entirely
+wherever possible.}
+
+%% \auditme{Type-safe handling of encoded data applies to \ourcalc programs written by hand,
+%% but we also explore synthesizing \ourcalc programs {\em automatically} from
+%% vanilla functional programs that say nothing about data layout.}
+%% \rn{I think we should perhaps make this less LoCal centric since it is more
+%%   HiCal centric once we call it ``Gibbon2''.}
+
+The layout of a \ourcalc data constructor by default takes only one
+(unaligned) byte in memory and fields may be referred to \emph{either} by
+pointer indirections or unboxed into the parent object (serialized).  We can
+thus interpolate between fully serialized and fully pointer-based
+representations.
+%
+{\ourcalc can thus serve as a flexible intermediate representation
+  for compilers or synthesis tools.}
+
+
+
+%% \section{Background}\label{sec:bg}
+% ================================================================================
+
+%% \note{Many programs batch-process input data from disk or network---parsing
+%% logs and reading serialized data formats such as JSON or protobufs.  These
+%% programs spend significant time simply \emph{deserializing} data into a
+%% memory format that the program can directly work with: for example,
+%% pointer-based object graphs in the Java heap. Recently, researchers and
+%% industry practitioners have begun to look (again) at unifying internal and
+%% external memory representations \cite{cnf-icfp15,capnproto} and}
+
+Consider a simple tree data structure, written in a language that supports algebraic datatypes:
+%
+%\vspace{-1mm}
+{\begin{code}
+    data Tree = Leaf Int | Node Tree Tree
+\end{code}}
+%\vspace{-1mm}
+%
+%% \noindent
+In memory, each node in this tree is either a \il{Leaf} node, typically
+consisting of a header word (denoting that it is a \il{Leaf}) and another word
+holding the integer data, or an interior \il{Node}, consisting of a header word
+and {\em two} double words (on a 64-bit system) holding pointers to its
+children. A tree with 2 internal nodes and 3 leaf nodes, then, occupies 64 bytes
+of space (20 bytes per internal node and 8 bytes per leaf node), even though it
+contains only 12 bytes of ``useful'' data.  Storing the pointers that maintain
+the internal structure of the tree represents a significant storage overhead.
+
+When relying on the usual pointer-based representation, this data 
+%In memory, this data structure can easily be represented using pointers from
+%\il{Node}s to their children, and
+can be readily traversed using standard idioms to perform computations such as summing all the leaf values:
+\begin{code}
+  sum t = case t of
+            Leaf n   -> n
+            Node x y -> (sum x) + (sum y)
+\end{code}
+
+But when represented on disk or sent over the wire, the same tree structure
+would not preserve pointers from a node to its children. Instead, the tree
+would be {\em serialized}, with the \il{Node}s and \il{Leaf}s of the tree laid
+out in a buffer in some sequential order. For example, the tree could be
+linearized in a left-to-right preorder, containing {\em tags} to mark data
+constructors and atomic fields such as integers, but ditching the pointers.
+Because it contains no pointers, this serialized representation is
+significantly more compact.
+%
+But without this structural information, in most settings the
+pre-order serialization would be deserialized prior to processing,
+requiring more code than the simple \il{sum} function above.
+
+However, this deserialization
+is not necessary---it is perfectly possible to write code that performs
+the same \il{sum} operation directly on the serialized representation.
+All that is necessary is for the code to visit every node in the tree, skipping over
+tags and \il{Node} data, and accumulating leaves into the \il{sum}.
+%
+This traversal can be accomplished in existing languages, writing low-level
+buffer-processing code as in the C++ code shown in \figref{fig:cpp-example}.
+
+
+%\floatstyle{boxed}\restylefloat{figure}
+\begin{figure}
+  \centering
+  \begin{lstlisting}[language=C++]
+    int sumPacked (byte * &ptr) {
+      int ret = 0
+      if (* ptr == LEAF) {
+        ptr++; //skip past tag
+        ret = * (int*)ptr; //retrieve integer
+        ptr += sizeof(int); //skip past integer
+      } else { //tag is INTERNAL
+        ptr++; //skip past tag
+        ret += sumPacked(ptr);
+        ret += sumPacked(ptr);
+      }
+      return ret;
+    }
+  \end{lstlisting}
+  \caption{A low-level traversal of serialized tree data.}
+  \label{fig:cpp-example}
+\end{figure}
+
+Essentially, this code operates as follows: \il{ptr} scans along the packed
+data structure. For each node type it encounters, it continues scanning
+through the node, retrieving the data it needs from the packed representation
+(in the case of \il{Leaf}s, the integer, in the case of \il{Node}s,
+nothing) and performing the necessary computation. Because this serialized
+representation is already in left-to-right preorder, no pointer-like
+accesses are necessary: scanning sequentially through the buffer suffices to
+access all the nodes of the tree. Note that the \il{sumPacked} function is
+still recursive; the program stack helps capture the tree structure of the
+data.
+%While this isn't strictly necessary for this function, other, more
+%complicated traversals may rely on reconstructing the structure.
+
+% \begin{comment}
+There are several advantages to working directly on serialized data: the
+serialized representation can take many times fewer bytes to represent than
+a normal pointer-based representation; data can be traversed faster once in
+memory due to predictable memory accesses; \emph{and} data can be read from
+disk without deserialization (e.g. via \texttt{mmap}).
+%
+%% This motivates contemporary efforts to unify internal and
+%% external memory representations like Cap'N Proto~\cite{capnproto}
+%% and GHC CNF~\cite{cnf-icfp15}.
+
+However, working directly with serialized data is not always easy. First,
+programs written with typical pointer-based representations benefit from
+standard techniques, such as type checking, to help programmers avoid errors
+while constructing traversals of their data structures (so, e.g., type
+checking can prevent a programmer from reading an integer value out of an
+interior node of the tree, or from visiting the children of a leaf node). But
+operations on serialized representations provide no such protection: all of the
+data in the tree is packed into a flat buffer that is traversed using cursors
+(\il{ptr}, in \figref{fig:cpp-example}). Cursors need to be manipulated carefully to visit
+the necessary portions of the buffer---skipping over the sections that are not
+needed---and read out the appropriate data, all without the safety net of a
+type checker. Hence, writing code to work directly on the serialized data can
+be tedious and error-prone.
+
+We propose instead to write the above example in a language, \emph{\ourcalc},
+expressly designed to use dense serializations for its values.
+The \ourcalc \il{sum} function extends the simple functional one above with region
+and location annotations:
+\begin{code}
+sum : forall @\locreg{l}{r}@ . @\tyatlocreg{Tree}{l}{r}@ -> Int
+sum [@\locreg{l}{r}@] t = case t of
+              Leaf (n : @\tyatlocreg{Int}{l_n}{r}@ ) -> n
+              Node (a : @\tyatlocreg{Tree}{l_a}{r}@) (b : @\tyatlocreg{Tree}{l_b}{r}@)
+               -> (sum [@\locreg{l_a}{r}@] a) + (sum [@\locreg{l_b}{r}@] b)
+\end{code}
+\vspace{-1mm}
+This code operates on serialized data, taking locations of that data (input and
+output) as additional function arguments.  It is a {\em region-polymorphic}
+function that performs a traversal within region $r$ that contains serialized
+data.  Well-typedness ensures that it only reads memory in a type-safe way.
+%
+Location variables ($\locreg{l}{r}$) have lexical scopes and are introduced as
+function arguments and pattern matches.
+%
+For instance, in the above program, we cannot
+access child node locations ($\locreg{l_a}{r}$,$\locreg{l_b}{r}$) until we correctly parse the input
+data at $l^r$ and ascertain that represents an intermediate node.
+%
+Conversely, as we will see, to \emph{construct} data the type system must
+enforce that adjacent fields be serialized consecutively.
+
+
+
+
 
 \chapter{The Location Calculus}
 
@@ -209,7 +431,7 @@ as a practical {\em intermediate language} for other tools or front-ends that
 want to convert computations to run on serialized data (essentially fusing a
 consuming recursion with the deserialization loop).
 %
-We return to this use-case in \secref{sec:impl-hical}.
+%% We return to this use-case in \secref{sec:impl-hical}.
 
 \paragraph{Allocating to output regions}
 %
@@ -337,10 +559,10 @@ Next, we will present a formalized core subset of \ourcalc,
 %% in more detail
 %% (\secref{subsec:grammar}),
 its type system (\secref{subsec:static}),
-and operational semantics (\secref{subsec:dynamic}),
+and its operational semantics (\secref{subsec:dynamic}).
 % which uses a store to  represent regions and locations.
-before moving on to implementation (\secref{sec:impl-local}, \secref{sec:impl-hical})
-and evaluation (\secref{sec:eval}).
+%% before moving on to implementation (\secref{sec:impl-local}, \secref{sec:impl-hical})
+%% and evaluation (\secref{sec:eval}).
 
 \section{Formal Language and Grammar}
 \label{subsec:grammar}
@@ -1208,7 +1430,7 @@ Words.
 
 
 \chapter{Applications and Evaluation}
-
+\label{chapter:applications}
 \note{General overview of the kinds of things we tested in Gibbon, how fast they were, etc.}
 
 \section{Microbenchmarks}
