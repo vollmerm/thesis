@@ -181,7 +181,7 @@ This abstract page is required. Make sure to adhere to the word count and other 
 
 \tableofcontents
 
-\chapter{Introduction}
+\chapter{Introduction}\label{chapter:intro}
 
 Many programs running today use heap object representations {\em fixed}
 by the language runtime system.
@@ -1715,8 +1715,8 @@ After a series of \ourcalc$\rightarrow$\ourcalc passes, we lower to a second IR,
 \emph{\lamcur}.
 As shown in \figref{fig:nocal-grammar},
 \lamcur is not a calculus at all, but a low-level language where
-memory operations are made explicit.  \lamcur{} functions closely resemble the C
-code shown in \figref{fig:cpp-example}. 
+memory operations are made explicit.  \lamcur{} functions closely resemble the C++
+code shown early in Chapter~\ref{chapter:intro}. 
 %
 Code in this form manipulates pointers into regions we call {\em cursors} because of
 their (largely continuous) motion through regions.
