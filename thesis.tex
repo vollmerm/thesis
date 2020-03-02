@@ -1597,7 +1597,7 @@ program must be transformed accordingly.
 
 Our current implementation adds an extra variant to every data type
 \footnote{These indirections do double-duty in allowing the memory
-  manager to use non-contiguous memory slabs for a region (Appendix~\appendixref{chapter:rts}).}
+  manager to use non-contiguous memory slabs for a region \secref{subsec:rts}.}
 representing a single indirection (called \il{I}).  For example, a binary tree
 \il{T} becomes
 \begin{code}
@@ -1743,7 +1743,7 @@ Because of inter-region indirections, a small \ourcalc runtime system is
 necessary to support the generated code.
 
 The \ourcalc runtime system is responsible for region-based memory management. 
-A detailed description of the memory management strategy is available in Appendix~\appendixref{chapter:rts}.
+A detailed description of the memory management strategy is available in \secref{subsec:rts} %Appendix~\appendixref{chapter:rts}.
 In brief, we use region-level reference counts.  Each region is implemented as
 linked list of contiguous memory chunks, doubling in size.  This memory is write-once,
 and immutability allows us to track reference counts \emph{only} at the region
@@ -2177,8 +2177,176 @@ because writes are ordered only by
 data-dependencies for computing \emph{locations}, with no ordering needed
 on the side-effects themselves.
 
+\subsection{Runtime System}\label{subsec:rts}
+% ================================================================================
+
+In \ourcalc, locations track natural number positions within a region.
+Abstractly, a region is an unbounded, byte-indexed storage area that can be
+extended incrementally by requesting $N$ additional bytes (equivalent to
+\il{malloc(N)}).
+%
+Each region grows monotonically, never shrinks, and can be
+freed only as a whole.
+%
+Practically speaking, there are at many reasonable implementation strategies.
+%
+We always start by allocating a contiguous {\em chunk} of memory of bounded
+size.  When that chunk is exhausted, we must choose whether to grow the
+region by {\bf copying} (or changing memory-mapping), retaining a contiguous
+address range, or by linking a new, non-contiguous chunk.
 
 
+%% \begin{enumerate}
+%% \item constant regions
+%% \item unbounded regions: must grow to accommodate allocation.
+%% \item huge regions: semantically the same as unbounded, but suspected to be very
+%%       large and long-lived.
+%% \end{enumerate}
+
+We choose the latter and implement regions as a linked list of chunks: a
+constant sized initial chunk, with subsequent chunks doubling in size.
+%
+% A reference to a region is just a pointer to its first chunk.
+The runtime representation of locations (and \il{Ptr T} values)
+is a direct pointer into the interior of a chunk.
+(We call the writable portion of the chunk that can carry data the {\em payload}.)
+Chunks linked together form regions as pictured in
+\figref{fig:regions}.  Chunk metadata is stored at the \emph{end} of the
+allocated area, in a footer data structure listed below:
+%
+\begin{lstlisting}[language=C++]
+  struct footer {
+    // Available bytes for serialized-data storage.
+    int  size;
+    // Shared reference count for this region (not chunk)
+    int* refcount;
+    // Set of regions we have outbound pointers into.
+    ptrset  outset;
+    // The chunk that follows this one (or NULL)
+    footer* next;
+  }
+\end{lstlisting}
+We avoid additional indirection by combining this metadata struct with the
+payload, which is essentially an array of bytes, forming one heap object.
+% \paragraph{Bounds-checking}
+The reason we store the metadata as a \emph{footer}, at the end rather than the
+start, is so that the payload grows \emph{towards} the struct.  Thus the pointer
+to the region-chunk does double duty for bounds checking.  When the payload
+space is full, we allocate a new chunk of double the size and point to it with
+\il{next}.
+
+But what do we put in the serialized bytestream to mark that the stream
+continues in another chunk?  Here we implicitly add a reserved tag to each
+packed data type, signaling {\em end of chunk} (EOC).\footnote{Of course, there
+  are 256 possible one-byte tags, so adding indirections, random-access nodes,
+  and EOC tags reduces the largest sum type supported (at least, without using
+  an escape sequence to access additional tags).}
+%
+When the reader hits an EOC, they must use their pointer to the end of the
+current payload to access the footer, follow the \il{next} pointer, and resume
+reading at the head of the next chunk.
+
+%% Here we introduce a slight variation on the concept
+%% of an indirection node from \secref{sec:indirections}, a {\bf redirection
+%%   node}.  When a consumer reads an \il{Indirection (Ptr T)} value from the
+%% stream, it refers to the pointer to read a complete value of type \il{T} from
+%% a distant address, but then it comes back to the original buffer, containing the
+%% indirection, and continues.  In contrast,
+
+
+\paragraph{Garbage collection}
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In most classic treatments, regions introduced with a \il{letregion},
+are deallocated immediately upon the end of that \il{letregion}'s lexical
+scope.
+%
+However, in this paper we choose to allow tagged indirection nodes to include
+{\bf inter-region pointers}.  Thus one can keep a region alive beyond the scope of the
+\il{letregion} that introduced it, by simply capturing a pointer to it within
+another region.
+%
+This choice is critical to our ability to lift functions onto (mostly)
+serialized representations without changing their asymptotic complexity.
+
+In our setting, pointers between regions are immutable, which simplifies the job of
+garbage collection.  Rather than keeping a ``remembered set'' of inter-region pointers as
+in a generational collector, we can instead \emph{coarsen} the dependencies to record only
+that ``chunk A points to region B''.  The \il{outset} in the \il{footer} struct above
+tracks regions to which our chunk points\footnote{This set is optimized for zero or one
+  elements.  A null pointer denotes the empty set, and singleton is a direct (tagged)
+  pointer to the element.  Two or more elements introduce a heap data structure to store
+  the out-set.}.
+
+Both tracing or reference counting collectors would benefit from this
+coarsening.  However, given that we already amortize the overheads of memory
+management through coarsening, we choose reference counting for our
+implementation to achieve prompt deallocation (and reuse) of chunks.
+%
+Thus when a region is created with \il{letregion} its reference count is set to 1,
+and it is decremented on exit from the \il{letregion}.
+%
+Reference counts are region-level rather than chunk-level, which is why the
+\il{footer} contains a pointer to the region-level reference count, rather than
+a reference count directly.
+%
+When a region hits zero reference count, it is freed immediately via freeing its
+chunks one by one.  When a chunk is deallocated, it decrements the reference
+count of any regions it points to.
+
+
+\floatstyle{plain}\restylefloat{figure}
+\begin{figure}
+  \vspace{-15mm}
+  \begin{center}
+    \includegraphics[width=0.75\textwidth]{region-memlayout2}
+  \end{center}
+  \vspace{-4mm}
+  \caption{Example of multiple chunks making up a region, and of an inter-region
+    indirection.  \captionscrunch{}}
+  \label{fig:regions}
+\end{figure}
+
+
+\paragraph{Comparing against prior art's memory management}
+Finally, in order to compare against other work, we also implement a technique
+for {\bf huge regions}; these are allocated as a large slab containing many
+pages, and could be extended by mapping new virtual memory after hitting a guard
+page capping the region end.  This was the approach used by
+Gibbon~\cite{ecoop17-gibbon}.
+%
+These huge regions avoid bounds checks when writing payloads and they are
+suitable for programs with a small number of large regions (especially a single
+input and single output region).  But they are inappropriate for the more
+general case where programs may have small and short-lived regions.
+%
+%% \Red{We quantify the performance impacts of this trade-off in
+%%   \secref{sec:eval-litmus}.}
+
+%% Previous compilers based on regions, such as the MLKit compiler~\citep{mlkit},
+%% can represent an extreme
+
+The choice of allocation strategy can be informed by static information the
+compiler gathers about the lifetime and potential size range of the region.  For
+example, the region-based MLKit compiler achieved significant speedups from
+statically classifying a majority of regions as constant-sized
+\cite{mlkit-retrospective}, in which case they are allocated inside the procedure
+stack frame.
+%
+% In our case, because we are packing many logical values into a smaller number of
+In our approach, we unbox constant-sized data types (e.g. numbers), and
+pack recursive data-types into growable regions, so we do not observe the same
+opportunity for constant-sized regions.
+
+
+%% \begin{itemize}
+%% \item {\bf Bounds-check} or {\bf guard page}:
+%% \item {\bf Copying} or {\bf Linking}:
+%% \end{itemize}
+
+%% The latter choice is relevant to the design of our ``mostly serialized''
+%% representation, because {\em contiguity} changes the design space for
+%% offset-based pointers.  For instance, if using the copying strategy
 
 
 \chapter{Applications and Evaluation}
@@ -2701,177 +2869,6 @@ tree is relatively less, reducing the opportunity for improvement.
 
 \appendix
 
-\chapter{\ourcalc Runtime System Details}
-\label{chapter:rts}
-% ================================================================================
-
-In \ourcalc, locations track natural number positions within a region.
-Abstractly, a region is an unbounded, byte-indexed storage area that can be
-extended incrementally by requesting $N$ additional bytes (equivalent to
-\il{malloc(N)}).
-%
-Each region grows monotonically, never shrinks, and can be
-freed only as a whole.
-%
-Practically speaking, there are at many reasonable implementation strategies.
-%
-We always start by allocating a contiguous {\em chunk} of memory of bounded
-size.  When that chunk is exhausted, we must choose whether to grow the
-region by {\bf copying} (or changing memory-mapping), retaining a contiguous
-address range, or by linking a new, non-contiguous chunk.
-
-
-%% \begin{enumerate}
-%% \item constant regions
-%% \item unbounded regions: must grow to accommodate allocation.
-%% \item huge regions: semantically the same as unbounded, but suspected to be very
-%%       large and long-lived.
-%% \end{enumerate}
-
-We choose the latter and implement regions as a linked list of chunks: a
-constant sized initial chunk, with subsequent chunks doubling in size.
-%
-% A reference to a region is just a pointer to its first chunk.
-The runtime representation of locations (and \il{Ptr T} values)
-is a direct pointer into the interior of a chunk.
-(We call the writable portion of the chunk that can carry data the {\em payload}.)
-Chunks linked together form regions as pictured in
-\figref{fig:regions}.  Chunk metadata is stored at the \emph{end} of the
-allocated area, in a footer data structure listed below:
-%
-\begin{lstlisting}[language=C++]
-  struct footer {
-    // Available bytes for serialized-data storage.
-    int  size;
-    // Shared reference count for this region (not chunk)
-    int* refcount;
-    // Set of regions we have outbound pointers into.
-    ptrset  outset;
-    // The chunk that follows this one (or NULL)
-    footer* next;
-  }
-\end{lstlisting}
-We avoid additional indirection by combining this metadata struct with the
-payload, which is essentially an array of bytes, forming one heap object.
-% \paragraph{Bounds-checking}
-The reason we store the metadata as a \emph{footer}, at the end rather than the
-start, is so that the payload grows \emph{towards} the struct.  Thus the pointer
-to the region-chunk does double duty for bounds checking.  When the payload
-space is full, we allocate a new chunk of double the size and point to it with
-\il{next}.
-
-But what do we put in the serialized bytestream to mark that the stream
-continues in another chunk?  Here we implicitly add a reserved tag to each
-packed data type, signaling {\em end of chunk} (EOC).\footnote{Of course, there
-  are 256 possible one-byte tags, so adding indirections, random-access nodes,
-  and EOC tags reduces the largest sum type supported (at least, without using
-  an escape sequence to access additional tags).}
-%
-When the reader hits an EOC, they must use their pointer to the end of the
-current payload to access the footer, follow the \il{next} pointer, and resume
-reading at the head of the next chunk.
-
-%% Here we introduce a slight variation on the concept
-%% of an indirection node from \secref{sec:indirections}, a {\bf redirection
-%%   node}.  When a consumer reads an \il{Indirection (Ptr T)} value from the
-%% stream, it refers to the pointer to read a complete value of type \il{T} from
-%% a distant address, but then it comes back to the original buffer, containing the
-%% indirection, and continues.  In contrast,
-
-
-\paragraph{Garbage collection}
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-In most classic treatments, regions introduced with a \il{letregion},
-are deallocated immediately upon the end of that \il{letregion}'s lexical
-scope.
-%
-However, in this paper we choose to allow tagged indirection nodes to include
-{\bf inter-region pointers}.  Thus one can keep a region alive beyond the scope of the
-\il{letregion} that introduced it, by simply capturing a pointer to it within
-another region.
-%
-This choice is critical to our ability to lift functions onto (mostly)
-serialized representations without changing their asymptotic complexity.
-
-In our setting, pointers between regions are immutable, which simplifies the job of
-garbage collection.  Rather than keeping a ``remembered set'' of inter-region pointers as
-in a generational collector, we can instead \emph{coarsen} the dependencies to record only
-that ``chunk A points to region B''.  The \il{outset} in the \il{footer} struct above
-tracks regions to which our chunk points\footnote{This set is optimized for zero or one
-  elements.  A null pointer denotes the empty set, and singleton is a direct (tagged)
-  pointer to the element.  Two or more elements introduce a heap data structure to store
-  the out-set.}.
-
-Both tracing or reference counting collectors would benefit from this
-coarsening.  However, given that we already amortize the overheads of memory
-management through coarsening, we choose reference counting for our
-implementation to achieve prompt deallocation (and reuse) of chunks.
-%
-Thus when a region is created with \il{letregion} its reference count is set to 1,
-and it is decremented on exit from the \il{letregion}.
-%
-Reference counts are region-level rather than chunk-level, which is why the
-\il{footer} contains a pointer to the region-level reference count, rather than
-a reference count directly.
-%
-When a region hits zero reference count, it is freed immediately via freeing its
-chunks one by one.  When a chunk is deallocated, it decrements the reference
-count of any regions it points to.
-
-
-\floatstyle{plain}\restylefloat{figure}
-\begin{figure}
-  \vspace{-15mm}
-  \begin{center}
-    \includegraphics[width=0.75\textwidth]{region-memlayout2}
-  \end{center}
-  \vspace{-4mm}
-  \caption{Example of multiple chunks making up a region, and of an inter-region
-    indirection.  \captionscrunch{}}
-  \label{fig:regions}
-\end{figure}
-
-
-\paragraph{Comparing against prior art's memory management}
-Finally, in order to compare against other work, we also implement a technique
-for {\bf huge regions}; these are allocated as a large slab containing many
-pages, and could be extended by mapping new virtual memory after hitting a guard
-page capping the region end.  This was the approach used by
-Gibbon~\cite{ecoop17-gibbon}.
-%
-These huge regions avoid bounds checks when writing payloads and they are
-suitable for programs with a small number of large regions (especially a single
-input and single output region).  But they are inappropriate for the more
-general case where programs may have small and short-lived regions.
-%
-%% \Red{We quantify the performance impacts of this trade-off in
-%%   \secref{sec:eval-litmus}.}
-
-%% Previous compilers based on regions, such as the MLKit compiler~\citep{mlkit},
-%% can represent an extreme
-
-The choice of allocation strategy can be informed by static information the
-compiler gathers about the lifetime and potential size range of the region.  For
-example, the region-based MLKit compiler achieved significant speedups from
-statically classifying a majority of regions as constant-sized
-\cite{mlkit-retrospective}, in which case they are allocated inside the procedure
-stack frame.
-%
-% In our case, because we are packing many logical values into a smaller number of
-In our approach, we unbox constant-sized data types (e.g. numbers), and
-pack recursive data-types into growable regions, so we do not observe the same
-opportunity for constant-sized regions.
-
-
-%% \begin{itemize}
-%% \item {\bf Bounds-check} or {\bf guard page}:
-%% \item {\bf Copying} or {\bf Linking}:
-%% \end{itemize}
-
-%% The latter choice is relevant to the design of our ``mostly serialized''
-%% representation, because {\em contiguity} changes the design space for
-%% offset-based pointers.  For instance, if using the copying strategy
 
 
 \chapter{Formalization and Type Safety Proof}
