@@ -1521,6 +1521,118 @@ equivalent to generating \ourcalc with reordered fields in the source program.
 
 \section{Converting Functional Programs to the Location Calculus}\label{sec:infer-local}
 
+\ourcalc captures a notion of computation over (mostly) serialized data,
+\emph{exposing} choices about representation. It provides the levers needed by a human
+or another tool to explore the design space of optimization trade-offs above
+this level, \ie{} for the human or tool to answer the question
+\emph{``how do we globally optimize a pipeline of functions on serialized data?''}.
+
+%\begin{itemize} 
+%\paragraph{How to globally optimize pipelines of functions on serialized data?}
+%  \begin{itemize}
+   First, if multiple functions use the same datatype, do they standardize on one
+    representation?  Or does that datatype take different encodings at different
+    points in the pipeline (implemented by cloning the datatype and
+    presenting it to \ourcalc with different annotations)?
+%    
+    Second, when up against the constraint of {\em already-serialized} data on
+    disk, the compiler can't change the existing representation, if the
+    external data \emph{lacks offsets}, is it better to \emph{force}
+    the first consuming function to use that representation, or to insert an
+    extra {\em reserialization} step to convert\footnote{Still faster
+    than traditional deserialization: no object graph allocation.}?
+%
+    Third, can the compiler permute fields to improve performance or reduce the
+    stored offsets needed?
+%  \end{itemize}
+%\end{itemize}
+
+This large space of future work is beyond the scope of this paper, but we nevertheless
+illustrate the process of
+integrating \ourcalc into Gibbon.
+%% building a front-end above \ourcalc with one example
+%% tool: the {\em \lamadt} language and compiler.
+%
+The front-end language for Gibbon, \lamadt, is a vanilla purely functional
+language without any region or location
+annotations.  It hides data-layout from the programmer (and the low-level
+control that comes with it).  It also facilitates comparison with 
+mature compilers, as \lamadt runs standard functional programs:
+for example, the {\em unannotated} examples we've seen in this paper.
+
+{The syntax for \lamadt is a subset of Haskell syntax, supporting
+  algebraic data types and top-level function definitions. It is a
+  monomorphic, strict functional programming language, and for
+  simplicity it is first order, like \ourcalc.}
+% \mv{Future work: closures?}
+{In future-work, we plan to add support for a higher-order, polymorphic
+  front-end language through standard monomorphization and defunctionalization.
+  (An interesting consequence of this will be that closures become regular
+  datatypes, such that a list of closures could be serialized in a dense
+  representation.)}
+
+%% \note{Using multiple representations for the same type in the same program is an area
+%% for future study.
+%% \Secref{sec:eval} includes the multi-pass program \il{repmax}
+%% where one pass incurs overhead to satisfy the representation needs of another.
+%
+
+\paragraph{Implementing \lamadt}
+The compiler must perform a variant of {\em region
+  inference}~\cite{regioncalcs,mlkit-retrospective}, but differs from
+previous approaches in some key ways.
+%
+The inference procedure uses a combination of standard techniques from the literature and specialized
+approach for satisfying \ourcalc's particular needs\footnote{The {\em
+    Directed Inference Engine for region Types}, if you will.}.
+%
+Because the inference must determine
+not only what region a value belongs to, but \emph{where} in that region it will
+be, the inference procedure returns a set of constraints for an expression similar to the
+constraint environment used in the typing rules in \figref{fig:types}, which are
+used to determine placement of symbolic location bindings. Additionally, certain locations
+are marked as \emph{fixed} (function parameters, data constructor arguments), and when two
+fixed locations attempt to unify it signals the need for an indirection, and the
+program must be transformed accordingly.
+
+Our current implementation adds an extra variant to every data type
+\footnote{These indirections do double-duty in allowing the memory
+  manager to use non-contiguous memory slabs for a region (Appendix~\appendixref{chapter:rts}).}
+representing a single indirection (called \il{I}).  For example, a binary tree
+\il{T} becomes
+\begin{code}
+data T = Leaf | Node T T | I (Ind T)
+\end{code}
+%
+The identity function \il{id x = x}, when compiled to \ourcalc, is \il{id x = I x}.
+Likewise, sharing demands indirections, and 
+\il{let x = _ in Node x x}
+becomes
+\il{let x = _ in Node x (I x)}.
+%
+%% For it to {synthesize} a well-typed \ourcalc term, it adds
+%% indirections (not offsets) to satisfy two constraints: (1) a function
+%% must write its output to distinct destination region(s) passed as arguments,
+%% and (2) a data-constructor must have all its arguments within the same region,
+%% consecutively ordered by location.
+%
+%% For example, these problems arise in compiling the following functions:
+%% \begin{code}
+%%   id x = x
+%% shareTree 0 = Leaf 1
+%% shareTree n = let x = shareTree (n-1) in
+%%               Node x x
+%% \end{code}
+
+%% In the case of the identity function, the fixed locations of the
+%% function type prevent the program from returning a value of the same
+%% location as its input, so it must be transformed to instead return a
+%% location in a new region that consists of an indirection to the
+%% input. Similarly, in the second function, because the same subtree is
+%% used twice (shared) as both fields of a node, the node constructor
+%% will be annotated to expect indirections for both fields.
+%For example, the identity function becomes:
+
 
 \section{Compiling the Location Calculus} \label{sec:impl-local}
 
@@ -1588,7 +1700,8 @@ Gibbon, as described previously in \secref{sec:infer-local}.
   \caption{{Grammar of \lamcur{} (an extension of \ourcalc{}) \captionscrunch}}
   \label{fig:nocal-grammar}
 \end{figure}
-\paragraph{Compiler Structure}
+
+\subsection{Compiler Structure}\label{subsec:compiler_structure}
 We implement \ourcalc with a micropass, whole-program compiler that performs
 full region/location type checking
 %% (and running test programs)
@@ -1645,7 +1758,7 @@ when no other regions point into it.
   \label{fig:compiler-arch}
 \end{figure*}
 
-\subsection{Finding Traversals}
+\subsubsection{Finding Traversals}
 \label{sec:find-traversal}
 
 %% After location inference produces a valid \ourcalc{} program, the program is
@@ -1730,7 +1843,7 @@ maplike : forall $\locreg{l_1}{r_1}$ $\locreg{l_2}{r_2}$. @\tyatlocreg{Tree}{l_1
 rightmost : forall $\locreg{l}{r}$ . @\tyatlocreg{Tree}{l}{r}@ $\xrightarrow{\{\}}$ Int
 \end{code}
 
-\subsection{Implementing Random Access}
+\subsubsection{Implementing Random Access}
 \label{sec:rand-access}
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 %% (by changing data constructors to contain random-access skip-ahead pointers, and
@@ -1963,7 +2076,7 @@ So a pattern match in our tree examples becomes
 %% %%     DataConE con args ->
 %% %% \end{code}
 
-\subsection{Routing End Witnesses}
+\subsubsection{Routing End Witnesses}
 \label{sec:route-ends}
 % \subsection{Route-Ends, To-Cursors, and Code Generation}
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2009,7 +2122,7 @@ bound here with an extended \il{let} form.
 Similarly, the final return statement returns the end-witness of the right subtree,
 $\locreg{l_c}{r}$, using a new \il{return} form in the IR.
 
-\subsection{Converting to \lamcur}
+\subsubsection{Converting to \lamcur}
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 \label{sec:cursorize}
 
@@ -2063,6 +2176,8 @@ in memory, which aids prefetching and caching,
 because writes are ordered only by
 data-dependencies for computing \emph{locations}, with no ordering needed
 on the side-effects themselves.
+
+
 
 
 
