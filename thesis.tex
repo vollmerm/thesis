@@ -1541,6 +1541,331 @@ and immutability allows us to track reference counts \emph{only} at the region
 level.  Exiting a \il{letregion} decrements the region's count, and it is freed
 when no other regions point into it.
 
+\begin{figure*}\center
+  \includegraphics[width=0.6\textwidth]{compiler_arch}
+  \caption{Compiler architecture.  Here we show the most important
+    passes within the three phases of the compiler delimited by
+    the three core IRs (front-end, middle-end, back-end).}
+  \label{fig:compiler-arch}
+\end{figure*}
+
+\subsection{Compiler (1/4): Finding Traversals}
+\label{sec:find-traversal}
+
+%% After location inference produces a valid \ourcalc{} program, the program is
+%% still in a form that assumes access to any field of a data constructor.
+
+%% In order to efficiently compile expressions with pattern matching on data
+%% structures {with one or more fields which are not indirections}, the
+%% compiler needs to generate code for computing the pointers of each field of the
+%% structure in order to bind them to pattern variables.
+
+Pattern matches in \ourcalc bind all constructor fields, including those that
+occur at non-constant offsets, later in memory.
+%
+The compiler must determine which fields are reachable based on either (1)
+constant offsets, (2) stored offsets/indirections present in the datatype, or
+(3) by leveraging traversals already present in the code that scan past the
+relevant data.
+%
+The third case corresponds to determining end witnesses in the formal semantics.
+%% and in general \ourcalc{} allows for all fields in any
+%% data structure to be bound by pattern matching.
+%
+%% That is, for a pattern match on \il{Node x y}, the program may assume that it
+%% can reference \il{y} and therefore (implicitly) compute the end witness of \il{x} to reach
+%% the address of \il{y} in memory.
+%
+% including those to the right of inline-serialized child structures.
+Likewise, this compiler pass identifies data reached by the work the program
+already performs.
+
+%% %% we have an extremely simple metric for whether it is at risk of increased work
+%% %% and degraded asymptotic complexity:
+%% %% \begin{itemize}
+%% %% \item Was a \il{copy} inserted?
+%% %% \item Does the program refer to a location
+%% %% \end{itemize}
+
+%% %% After the location inference algorithm generates a \ourcalc{} program,
+%% %% we run {a simple analysis to check if the asymptotic complexity of
+%% %%   any of the functions has changed},
+%% %% \rn{no that's not simple in general!}
+%% %% and if it has, we add
+%% %% layout information to the program to restore it.
+%% %% Since the location inference algorithm applies some `known' program
+%% %% repair strategies like inserting calls to copy functions,
+%% %% adding dummy traversals etc. performing this analysis is a simple matter
+%% %% identifying these repair strategies and
+%% %% replacing them with more efficient ones.
+%% %% All calls to copy functions can be eliminated just by inserting
+%% %% an indirection node instead.
+%% %% However, doing the same for traversal functions
+%% %% is tricky and requires some further analysis.
+
+
+To this end, we use a variation of a technique we previously proposed
+\cite{ecoop17-gibbon}.  Specifically, we assign \emph{traversal effects} to
+functions.  A function is said to {\em traverse} it's input location if it
+touches every part of it.  In \ourcalc{}, a case expression is the only way to
+induce a traversal effect.  If all clauses of the case expression in turn
+traverse the packed elements of the corresponding data constructors, the
+expression traverses to the end of the scrutinee.
+%
+Traversing a location means witnessing the size of the value encoded at that
+location, and thus computing the address of the \emph{next} value in memory.
+% (This is the $\phi$ function from \secref{sec:lang}).
+%
+After this pass, the type schemes of top-level function definitions reflect
+their traversal effects.
+
+%% This analysis is very similar to the \emph{effect inference} process
+%% described in~\citet{ecoop17-gibbon}.
+%% % , and we leave the reader to find more details in that paper.
+%% The primary difference in our approach, other than the overall purpose (their
+%% effect inference procedure is used to infer something like location annotations,
+%% though ``abstract locations'' in that paper are quite different than what we
+%% call locations---and, in fact, unnecessary traversals and copies are inserted
+%% into Gibbon programs after effect inference), is that no unification is
+%% required.
+
+\begin{code}
+maplike : forall $\locreg{l_1}{r_1}$ $\locreg{l_2}{r_2}$. @\tyatlocreg{Tree}{l_1}{r_1}@ $\xrightarrow{\{ l_1, l_2 \}}$ @\tyatlocreg{Tree}{l_2}{r_2}@
+rightmost : forall $\locreg{l}{r}$ . @\tyatlocreg{Tree}{l}{r}@ $\xrightarrow{\{\}}$ Int
+\end{code}
+
+\subsection{Compiler (2/4): Implementing Random Access}
+\label{sec:rand-access}
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+%% (by changing data constructors to contain random-access skip-ahead pointers, and
+%% thus avoiding any need for dummy traversals in these situations).
+
+Once we know what fields are traversed, we can also determine which fields are
+used but \emph{not} naturally reachable by the program: e.g. the right subtree
+read by \il{rightmost}.
+%
+% Compiled in the style of
+% If we take no further action, \il{sizeof(left)}
+In later stages of the compiler, we eliminate all direct references to
+pattern-matched fields {\em after} the first variable-sized one.
+%
+This is where space/time optimization choices must be made:
+bytes for offsets v.s. cycles for unnecessary traversals.
+
+%% Through this compiler pass we determine which functions \emph{do not}
+%% traverse their inputs, and hence if it is necessary to modify the
+%% data structures those functions operate on to allow them to execute
+%% efficiently.
+%% For example, a function that returns the leftmost leaf of a tree does not
+%% traverse its input, but it can be compiled without any modifications to use the
+%% default serialization format.
+%% %
+%% Conversely, the \il{rightmost} function does not touch all input bytes, \emph{and}
+%% needs additional support from the datatype to avoid asymptotically expensive
+%% dummy traversals.
+%% %
+%% To avoid this, we enumerate all data-types where we need to ``skip over''
+%% variable-sized fields and we modify the data type to enable random-access.
+
+% \paragraph{Random-access nodes include offsets}
+% \paragraph{Adding offsets}
+%\paragraph{Layout Information}
+\label{sec:RAN}
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+%% When the compiler knows for sure that a data constructor being allocated will
+%% need random access to its fields, it can do much better than implementing all
+%% fields as \emph{tagged} indirection nodes.
+%% First of all, random access to field $N$ would
+%% require that \emph{all} fields $1 \ldots N-1$ be indirection nodes in order to
+%% make assumptions about the offset to reach field $N$, which negates the
+%% flexibility of tagged indirections occurring anywhere.
+%% Second, the aforementioned space and time overheads for dispatching on
+%% ``\il{I}'' tags would add up.
+
+To activate random-access for a particular field within a data constructor, we
+add additional information following the tag.  Specifically, for a constructor
+\il{K T1 T2}, if we need immediate access to \il{T2}, we include a 4-byte
+relative-offset after the constructor.
+% \il{K' (Ptr T2) T1 T2}.
+%
+%% (We never do this for the leftmost field, which we can already reach in constant
+%% time.)  
+%% applying this technique to the running example datatype yields:
+%% \begin{code}
+%%   data Tree = Leaf Int | ${\color{blue} {\q{Node'}\ \q{(Ptr Tree) Tree Tree}}}$
+%% \end{code}
+%%
+%% Here we have eliminated the original \il{Node} constructor, but we could also
+%% keep both variants; in future work we plan to explore this possibility.
+%% %
+%% The random-access constructor \il{Node'} takes one word more space,
+%% saving on space compared to a traditional pointer-based
+%% representation\footnote{It may look like \il{Node'} has three fields, but at
+%%   runtime this does not imply three words.  Rather, the naked \il{Tree} fields
+%%   are still serialized directly in the stream, and so they are more akin to
+%%   promises of future data on the stream, than fields in traditional structs or
+%%   tuples.},
+%% yet it can still be consumed either in-order or via random-access.
+%% %
+%% If reading \il{Tree} in-order, the reader ignores the \il{Ptr Tree} field and
+%% reads the left- and right-subtrees as usual.
+%% %
+%% %% The random-access technique is composable with the indirection technique,
+%% %% increasing the space of possible encodings (and we could mix and match normal
+%% %% and random-access constructors within an encoding as well, \il{Node} and
+%% %% \il{Node'}).
+%% %
+%% An example with random-access nodes is pictured below, including
+%% relative offsets, and representing the source expression
+
+%% \lstinline{Node (Node (Leaf 1) (Leaf 2)) (Node (Leaf 3) (Leaf 4))}.
+
+%% %
+%% \begin{center}
+%%   \includegraphics[width=0.4\textwidth]{figs/tree_random_access_nodes}
+%% \end{center}
+%
+%% Unlike tagged indirections, random-access nodes use fewer bytes than a
+%% traditional pointer-based representation.  In this tree example, we use
+%% \emph{one} word for pointer data, rather than two words (both left and right
+%% pointers).  Compared with the tagged-indirection version, this saves a couple of
+%% bytes on tags as well as the runtime overhead of switching on them.
+
+%% % In total, this encoding takes 45 bytes rather than the 47 with tagged
+%% % Overall, the left encoding above takes 29 bytes, and the right takes 47 bytes.
+
+% \subsubsection{Back-tracking to add random-access}
+\paragraph{Back-tracking}
+%
+Unfortunately, when we modify datatypes to add offsets, we invalidate
+previously computed location information.  Thus the compiler {\em backtracks},
+rewinding in time to before find-traversals (and inserting extra \il{letloc}
+expressions to skip-over the offset bytes themselves).
+% InferLocations
+% (as pictured in \figref{fig:compiler-arch}), restoring correct location information.
+%
+Adding random access to one datatype never \emph{increases} the set of
+constructors needing random-access to maintain work-efficiency, so in fact we
+only backtrack at most once.
+%% Thus this back-track can happen {\em at most once}\footnote{The marked set of constructors
+%%   is a conservative over-approximation; it would be possible in principle to
+%%   construct a program with types \il{A} and \il{B}, both of which are marked for
+%%   random access, but where \il{A} becoming random-access would obviate the need
+%%   for \il{B}.  Further optimizations are possible.}.
+%
+%
+%% After this is complete, the \il{rightmost} example becomes:
+%% %
+%% \begin{code}
+%% rightmost : @\tyatlocreg{Tree}{l_{1}}{r_1}@ -> Int
+%% rightmost tr =
+%%  case tr of
+%%    Leaf (n : @\tyatlocreg{Int}{l_n}{r_1}@ ) -> n
+%%    Node' (ran : (Ptr (@\tyatlocreg{Tree}{l_b}{r_1}@)) @\tyatlocreg{}{l_{ran}}{r_1}@)
+%%   (a : @\tyatlocreg{Tree}{l_a}{r_1}@) (b : @\tyatlocreg{Tree}{l_b}{r_1}@) -> rightmost [@\locreg{l_{b}}{r_1}@] b
+%% \end{code}
+% \note{TOOD: Make the `read RAN and then call rightmost with it' step explicit in the example.}
+
+
+%% That's because it never uses the right child of the tree, which it cannot reach
+%% without a dummy traversal.  So we perform a simple occurs-check to look for uses
+%% of such {\em unreachable} packed elements in the function body, and mark the
+%% corresponding data constructor as needing random access if so.
+%
+In the default (offset-adding) mode, any function that demands random access to
+a field will determine the representation for all functions using the
+datatype.
+%
+Our current LoCal compiler does \emph{not} automate choices such as duplicating
+datatypes to achieve multiple encodings of the same data---that is left to the
+programmer or upstream tools.
+
+If the LoCal compiler is passed a flag to {\em not} automatically change
+datatypes, then it must use the same approach we previously used in Gibbon~\cite{ecoop17-gibbon}:
+insert {dummy traversals} that scan across earlier
+fields to reach later ones.
+%
+Regardless of whether the offset or dummy-traversal strategy is used,
+%
+at the end of this compiler phase, we blank non-first fields in
+each pattern match to ensure they are not referenced directly.
+So a pattern match in our tree examples becomes
+ ``\il{Node a _ -> ...}'' or   ``\il{Node offset a _ -> ...}''.
+% with the location of the right child, $l_b$, computed by other means if needed.
+
+
+%% \begin{code}
+%%   Node' (ran : (Ptr (@\tyatlocreg{Tree}{l_b}{r_1}@)) @\tyatlocreg{l_{ran}}{r_1}@) (a : @\tyatlocreg{Tree}{l_a}{r_1}@) _ -> rightmost [@\locreg{l_b}{r_1}@] b
+%% \end{code}
+
+%% %% Depending on the result of the previous analysis, we switch the serialization format
+%% %% include layout information.
+%% %% This is a rather radical transformation, which affects all parts of the program.
+%% %% An important thing to note is that \q{AddLayout} operates on \lamadt{} programs,
+%% %% rather than \ourcalc{}.
+%% %% Because once we include indirection nodes in the serialization,
+%% %% the locations inferred in the previous phase are no longer valid.
+%% %% For example, in the tree serialization shown in \figref{fig:tree-packed},
+%% %% the left child is serialized immediately after the Node tag.
+%% %% Whereas in \figref{fig:indirections-layout}, we have to skip over
+%% %% the indirection node to get to the left child.
+%% %% So we essentially `go back in time', update the serialization format, and then run
+%% %% location inference again to ensure that the location arithmetic is valid.
+%% %% In practice, \q{AddLayout} takes in a \lamadt{} program, transforms it to include indirection nodes,
+%% %% and runs a few compiler passes again to get back a \ourcalc{} program.
+%% %% %
+%% %% \rn{Wait, is it just proper backtracking at this point? We can just draw a
+%% %%   back-edge in the architecture diagram.}
+
+%% %% Adding layout information involves the following steps:
+
+%% %% \begin{enumerate}
+%% %% \item In the current implementation, indirection nodes are encoded as
+%% %%   constructors of regular packed datatypes.  So we first update the data
+%% %%   types to have an additional constructor which takes in a pointer argument.
+%% %% \begin{code}
+%% %% data Tree = Leaf Int
+%% %%           | Inner Tree Tree
+%% %%           | ${\color{blue} {\q{Indirection}\ \q{Pointer}}}$
+%% %% \end{code}
+
+%% %% \item Update all data constructors having $n$ packed arguments, to accept
+%% %%   additional $(n-1)$ arguments to store the indirections.
+
+%% %% \begin{code}
+%% %% data Tree = Leaf Int
+%% %%           | Inner ${\color{blue} \q{Tree}}$ Tree Tree
+%% %%           | Indirection Pointer
+%% %% \end{code}
+%% %% \end{enumerate}
+
+
+%% Note that adding random-access to data-types involves changing the
+%% data-constructors that construct those values and every case
+%% expression that consumes them.  However, at this phase of the compiler
+%% (\lamadt{} and \ourcalc), the skip-ahead pointers are {\em not} used by  the
+%% operational semantics (and thus neither by an interpreter for the IR).
+%% %
+%% Rather, they are dormant until the conversion to the cursor-based \lamcur{} IR.
+%% %
+%% For instance, a data constructor application \il{Node x y}, becomes \il{Node
+%%   (ptrEndOf x) x y} (using a compiler primitive \il{ptrEndOf}), and a case
+%% expression matches the added pointer field, but ignores it  until later.
+
+%% %% \begin{code}
+%% %% case tree of Node $\color{blue} {(yp\ @\ {l_i} ^ {r})}$ (x $@\ {l_1} ^ {r}$) (_ $@\ {l_2} ^ {r}$) -> $\ldots$
+%% %% \end{code}
+
+%% % Update the constructor functions, (MkNode), to write the indirection nodes.
+
+%% %% \begin{code}
+%% %% addLayout : $\lamadt{}$ -> $\lamadt{}$
+%% %% addLayout ex =
+%% %%   case ex of
+%% %%     DataConE con args ->
+%% %% \end{code}
+
 
 
 \chapter{Applications and Evaluation}
