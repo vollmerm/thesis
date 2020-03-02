@@ -270,7 +270,7 @@ Consider a simple tree data structure, written in a language that supports algeb
 where a tree is either a leaf with an integer or a node with two trees.
 
 \begin{code}
-  data Tree = Leaf Int | Node Tree Tree
+data Tree = Leaf Int | Node Tree Tree
 \end{code}
 %\vspace{-1mm}
 %
@@ -289,9 +289,9 @@ When relying on the usual pointer-based representation, this data
 %\il{Node}s to their children, and
 can be readily traversed using standard idioms to perform computations such as summing all the leaf values:
 \begin{code}
-  sum t = case t of
-            Leaf n   -> n
-            Node x y -> (sum x) + (sum y)
+sum t = case t of
+          Leaf n   -> n
+          Node x y -> (sum x) + (sum y)
 \end{code}
 
 But when represented on disk or sent over the wire, the same tree structure
@@ -321,19 +321,19 @@ buffer-processing code as in the following C++ code:
 %% \begin{figure}
 %%   \centering
 \begin{lstlisting}[language=C++]
-  int sumPacked (byte * &ptr) {
-    int ret = 0; 
-    if (* ptr == LEAF) {
-      ptr++; // skip past leaf tag
-      ret = * (int*)ptr; // retrieve integer from leaf
-      ptr += sizeof(int); //skip past integer
-    } else { // tag must be node
-      ptr++; // skip past node tag
-      ret += sumPacked(ptr); // sum left sub-tree
-      ret += sumPacked(ptr); // sum right sub-tree
-    }
-    return ret;
+int sumPacked (byte * &ptr) {
+  int ret = 0; 
+  if (* ptr == LEAF) {
+    ptr++; // skip past leaf tag
+    ret = * (int*)ptr; // retrieve integer from leaf
+    ptr += sizeof(int); //skip past integer
+  } else { // tag must be node
+    ptr++; // skip past node tag
+    ret += sumPacked(ptr); // sum left sub-tree
+    ret += sumPacked(ptr); // sum right sub-tree
   }
+  return ret;
+}
 \end{lstlisting}
 %%   \caption{A low-level traversal of serialized tree data.}
 %%   \label{fig:cpp-example}
