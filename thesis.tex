@@ -81,7 +81,53 @@
 \input{formal_dynamics1}
 \input{editingmarks}
 
-\input{haskell_style}
+%% \input{haskell_style}
+%% \input{lsthaskell.sty}
+\usepackage{upquote}
+
+\lstnewenvironment{code}
+    {%\lstset{style=haskell}%
+      \lstset{escapechar={\@},mathescape=true}
+      \lstset{language=Haskell}
+      \lstset{
+        morekeywords={letloc}
+      }
+      \csname lst@SetFirstLabel\endcsname}
+    {\csname lst@SaveFirstLabel\endcsname}
+    {}
+%% \lstset{style=haskell}
+\lstdefinestyle{inline}{%
+  basicstyle=\footnotesize\ttfamily,
+  upquote=true,
+    keywordstyle=[1],
+    keywordstyle=[2],
+    keywordstyle=[3],
+    keywordstyle=[4],
+    escapechar={\@},
+    mathescape=true,
+    literate=
+        {\\}{{$\lambda$}}1
+        {Lambda}{{$\Lambda$}}1        
+        {\\\\}{{\char`\\\char`\\}}1
+        {>->}{>->}3
+        {>>=}{>>=}3
+        {->}{{$\rightarrow$\space}}3    % include forced space
+        {>=}{{$\geq$}}2
+        {<-}{{$\leftarrow$}}2
+        {<=}{{$\leq$}}2
+        {=>}{{$\Rightarrow$}}2
+        {|}{{$\mid$}}1
+%        {~}{{$\sim$}}1
+        {forall}{{$\forall$}}1
+        {exists}{{$\exists$}}1
+        {...}{{$\cdots$}}3
+}
+
+% \newcommand{\inl}[1]{\lstinline[style=inline];#1;}
+\newcommand{\il}[1]{\lstinline[style=inline,mathescape=true];#1;}
+
+\newcommand{\makeatcode}{\lstMakeShortInline[style=inline]@}
+\newcommand{\makeatchar}{\lstDeleteShortInline@}
 
 \begin{document}
 \maketitle
@@ -254,30 +300,30 @@ All that is necessary is for the code to visit every node in the tree, skipping 
 tags and \il{Node} data, and accumulating leaves into the \il{sum}.
 %
 This traversal can be accomplished in existing languages, writing low-level
-buffer-processing code as in the C++ code shown in \figref{fig:cpp-example}.
+buffer-processing code as in the following C++ code:
 
 
 %\floatstyle{boxed}\restylefloat{figure}
-\begin{figure}
-  \centering
-  \begin{lstlisting}[language=C++]
-    int sumPacked (byte * &ptr) {
-      int ret = 0
-      if (* ptr == LEAF) {
-        ptr++; //skip past tag
-        ret = * (int*)ptr; //retrieve integer
-        ptr += sizeof(int); //skip past integer
-      } else { //tag is INTERNAL
-        ptr++; //skip past tag
-        ret += sumPacked(ptr);
-        ret += sumPacked(ptr);
-      }
-      return ret;
+%% \begin{figure}
+%%   \centering
+\begin{lstlisting}[language=C++]
+  int sumPacked (byte * &ptr) {
+    int ret = 0; 
+    if (* ptr == LEAF) {
+      ptr++; // skip past leaf tag
+      ret = * (int*)ptr; // retrieve integer from leaf
+      ptr += sizeof(int); //skip past integer
+    } else { // tag must be node
+      ptr++; // skip past node tag
+      ret += sumPacked(ptr); // sum left sub-tree
+      ret += sumPacked(ptr); // sum right sub-tree
     }
-  \end{lstlisting}
-  \caption{A low-level traversal of serialized tree data.}
-  \label{fig:cpp-example}
-\end{figure}
+    return ret;
+  }
+\end{lstlisting}
+%%   \caption{A low-level traversal of serialized tree data.}
+%%   \label{fig:cpp-example}
+%% \end{figure}
 
 Essentially, this code operates as follows: \il{ptr} scans along the packed
 data structure. For each node type it encounters, it continues scanning
@@ -291,6 +337,41 @@ still recursive; the program stack helps capture the tree structure of the
 data.
 %While this isn't strictly necessary for this function, other, more
 %complicated traversals may rely on reconstructing the structure.
+\note{TODO: fix up and include add1 tree example here}
+%% As another example, consider a function that traverses a binary tree as defined
+%% previously, returns a new binary tree such that each integer has been incremented
+%% by one. This is again straightforward to describe recursively in a language
+%% like Haskell:
+
+%% \begin{code}
+%%   add1 tr =
+%%     case tr of
+%%       Leaf n -> Leaf (n + 1)
+%%       Node a b -> Node (add1 a) (add1 b)
+%% \end{code}  
+
+%% Like before, we can write a C++ function to do this same computation, only
+%% operating on and returning serialized binary trees. This new function will
+%% have to accept two arguments (pointers to the input and output byte arrays,
+%% respectively), and will additionally return a pointer.
+
+%% \begin{lstlisting}[language=C++]
+%% char* add1(char* tin, char* tout) {
+%%   if (*tin == Leaf) {
+%%     *tout = Leaf;
+%%     tin++; tout++;
+%%     *(int*)tout = *(int*)tin + 1;
+%%     return (tin + sizeof(int));
+%%   } else {
+%%     *tout = Node;
+%%     tin++; tout++;
+%%     char* t2 = add1(tin,tout);
+%%     tout += (t2 - t);
+%%     return add1(t2,tout);
+%%   }
+%% }
+%% \end{lstlisting}
+
 
 % \begin{comment}
 There are several advantages to working directly on serialized data: the
@@ -310,8 +391,8 @@ while constructing traversals of their data structures (so, e.g., type
 checking can prevent a programmer from reading an integer value out of an
 interior node of the tree, or from visiting the children of a leaf node). But
 operations on serialized representations provide no such protection: all of the
-data in the tree is packed into a flat buffer that is traversed using cursors
-(\il{ptr}, in \figref{fig:cpp-example}). Cursors need to be manipulated carefully to visit
+data in the tree is packed into a flat buffer that is traversed using cursors.
+Cursors need to be manipulated carefully to visit
 the necessary portions of the buffer---skipping over the sections that are not
 needed---and read out the appropriate data, all without the safety net of a
 type checker. Hence, writing code to work directly on the serialized data can
@@ -344,6 +425,7 @@ data at $l^r$ and ascertain that represents an intermediate node.
 Conversely, as we will see, to \emph{construct} data the type system must
 enforce that adjacent fields be serialized consecutively.
 
+\section{Background and Related Work}\label{sec:bg}
 
 
 
@@ -1549,7 +1631,7 @@ when no other regions point into it.
   \label{fig:compiler-arch}
 \end{figure*}
 
-\subsection{Compiler (1/4): Finding Traversals}
+\subsection{Finding Traversals}
 \label{sec:find-traversal}
 
 %% After location inference produces a valid \ourcalc{} program, the program is
@@ -1634,7 +1716,7 @@ maplike : forall $\locreg{l_1}{r_1}$ $\locreg{l_2}{r_2}$. @\tyatlocreg{Tree}{l_1
 rightmost : forall $\locreg{l}{r}$ . @\tyatlocreg{Tree}{l}{r}@ $\xrightarrow{\{\}}$ Int
 \end{code}
 
-\subsection{Compiler (2/4): Implementing Random Access}
+\subsection{Implementing Random Access}
 \label{sec:rand-access}
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 %% (by changing data constructors to contain random-access skip-ahead pointers, and
@@ -1747,24 +1829,25 @@ expressions to skip-over the offset bytes themselves).
 %
 Adding random access to one datatype never \emph{increases} the set of
 constructors needing random-access to maintain work-efficiency, so in fact we
-only backtrack at most once.
-%% Thus this back-track can happen {\em at most once}\footnote{The marked set of constructors
-%%   is a conservative over-approximation; it would be possible in principle to
-%%   construct a program with types \il{A} and \il{B}, both of which are marked for
-%%   random access, but where \il{A} becoming random-access would obviate the need
-%%   for \il{B}.  Further optimizations are possible.}.
+only backtrack at most once\footnote{The marked set of constructors
+  is a conservative over-approximation; it would be possible in principle to
+  construct a program with types \il{A} and \il{B}, both of which are marked for
+  random access, but where \il{A} becoming random-access would obviate the need
+  for \il{B}.  Further optimizations are possible.}.
 %
 %
-%% After this is complete, the \il{rightmost} example becomes:
-%% %
-%% \begin{code}
-%% rightmost : @\tyatlocreg{Tree}{l_{1}}{r_1}@ -> Int
-%% rightmost tr =
-%%  case tr of
-%%    Leaf (n : @\tyatlocreg{Int}{l_n}{r_1}@ ) -> n
-%%    Node' (ran : (Ptr (@\tyatlocreg{Tree}{l_b}{r_1}@)) @\tyatlocreg{}{l_{ran}}{r_1}@)
-%%   (a : @\tyatlocreg{Tree}{l_a}{r_1}@) (b : @\tyatlocreg{Tree}{l_b}{r_1}@) -> rightmost [@\locreg{l_{b}}{r_1}@] b
-%% \end{code}
+After this is complete, the \il{rightmost} example becomes:
+%
+\begin{code}
+rightmost : @\tyatlocreg{Tree}{l_{1}}{r_1}@ -> Int
+rightmost tr =
+ case tr of
+   Leaf (n : @\tyatlocreg{Int}{l_n}{r_1}@ ) -> n
+   Node' (ran : (Ptr (@\tyatlocreg{Tree}{l_b}{r_1}@)) @\tyatlocreg{}{l_{ran}}{r_1}@)
+         (a : @\tyatlocreg{Tree}{l_a}{r_1}@) (b : @\tyatlocreg{Tree}{l_b}{r_1}@)
+      -> rightmost [@\locreg{l_{b}}{r_1}@] *ran
+\end{code}
+\note{TODO: Clarify notation for using RAN pointers}
 % \note{TOOD: Make the `read RAN and then call rightmost with it' step explicit in the example.}
 
 
@@ -1782,7 +1865,7 @@ datatypes to achieve multiple encodings of the same data---that is left to the
 programmer or upstream tools.
 
 If the LoCal compiler is passed a flag to {\em not} automatically change
-datatypes, then it must use the same approach we previously used in Gibbon~\cite{ecoop17-gibbon}:
+datatypes, then it must use the same approach we previously used in~\cite{ecoop17-gibbon}:
 insert {dummy traversals} that scan across earlier
 fields to reach later ones.
 %
@@ -1865,6 +1948,107 @@ So a pattern match in our tree examples becomes
 %% %%   case ex of
 %% %%     DataConE con args ->
 %% %% \end{code}
+
+\subsection{Routing End Witnesses}
+\label{sec:route-ends}
+% \subsection{Route-Ends, To-Cursors, and Code Generation}
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+%% Gibbon, as described in~\citep{ecoop17-gibbon}, transforms a
+%% functional program operating on algebraic data structures using
+%% pattern matching into a pointer-passing (or ``cursor''-passing)
+%% imperative program.
+%% %
+%% Our compiler also must do a similar transformation, though unlike in
+%% \citet{ecoop17-gibbon}, \ourcalc{} enables these steps in our compiler to be
+
+Each of the traversal effects previously inferred proves we logically reach a
+point in memory, but to realize it in the program we add an
+additional return value to the function, witnessing the end-location for
+traversed values (as described in \cite{ecoop17-gibbon}).
+%
+We extend the syntax to allow additional location-return values,
+equivalent to returning tuples.  The \il{buildtree} example becomes:
+%
+
+\begin{code}
+buildtree : forall $l^r$. Int $\xrightarrow{\{l\}}$ [$\mathit{after}(\tyatlocreg{Tree}{l}{r})$] Tree$\locreg{@l}{r}$
+buildtree [$\locreg{l}{r}$]  n =
+  if n == 0 then return [$\locreg{l}{r}+9$] (Leaf $\locreg{l}{r}$ 1)
+  else letloc $\locreg{l_a}{r}$ = $\locreg{l}{r}$ + 1 in
+       let [$\locreg{l_b}{r}$] left = buildtree [$\locreg{l_a}{r}$] (n - 1) in
+       let [$\locreg{l_c}{r}$] right = buildtree [$\locreg{l_b}{r}$] (n - 1) in
+       return [$\locreg{l_c}{r}$] (Node $\locreg{l}{r}$ left right)
+\end{code}% \vspace{-1mm}
+%% letloc $l_{ran}$ = $l_1$ + 1 in
+%% letloc $l_a$ = $l_{ran}$ + 8 in
+%                @{let ran = (ptr) $l_b$ in}@
+
+%% Above, the use of \il{after} has disappeared.  With
+%% the additional end-witnesses returned by the recursive calls, the previous
+%% \il{sizeof} was not needed to compute $l_b$, and thus it was dropped as dead
+%% code.
+
+The \il{letloc} form for the location of the right subtree is gone, because
+the first recursive call to \il{buildtree} returned $\locreg{l_b}{r}$ as an end-witness,
+bound here with an extended \il{let} form.
+Similarly, the final return statement returns the end-witness of the right subtree,
+$\locreg{l_c}{r}$, using a new \il{return} form in the IR.
+
+\subsection{Converting to \lamcur}
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+\label{sec:cursorize}
+
+In this stage, we convert from \ourcalc{} into \lamcur{}, switching to
+imperative cursor manipulation.
+%
+%% Unlike previous published techniques,
+%% \ourcalc{} makes this step entirely type-directed and relatively
+%% straightforward.
+%% %
+%% % \item \textbf{To-Cursors}:
+%% %% Each function is further transformed to remove normal function argument bindings
+%% %% and pattern-match variable bindings. The threaded-through locations from the
+%% %% previous step become \emph{cursors}, and the program works imperatively on these
+%% %% cursors.
+%% %
+%% %% {Cursorize}
+%% %% \note{Probably has too much in common with the ECOOP17 paper.}
+At this stage, location arguments and return values turn into first-class cursor
+values (pointers into memory buffers representing regions).  The primitive
+operations on cursors read or write one atomic value, and advance the cursor to
+the next spot.  We drop much of the type information at this phase, and
+\il{rightmost} becomes:
+\begin{code}
+rightmost : Cursor -> Int
+rightmost cin =   -- take a pointer as input 
+  switch cin of   -- read one byte
+    Leaf(cin1)  -> 
+      let (cin2,n) = readInt(cin1) in n
+    Node(cin1)  -> -- only get a pointer to the 1st field
+      let (cin2,ran) = readCursor(cin1) in
+      rightmost ran
+\end{code}\vspace{-1mm}
+%
+Here the \il{switch} construct is simpler than \il{case},
+% is no longer pattern matching on data constructors to access fields, rather it is
+reading a one byte tag, switching on
+it, and binding a cursor to the very next byte in the stream
+(\il{cin1 == cin + sizeof(tag) == cin+1}).
+
+%
+The key takeaway here is that, because the relationship between
+location variables and normal variables representing packed data are
+made explicit in the types and syntax of \ourcalc{}, this pass
+does not require any complicated analysis.
+%
+Also, in \lamcur{} we can finally reorder writes to more often be {\em in order}
+in memory, which aids prefetching and caching,
+%\footnote{Linear access patterns are more friendly to prefetching \&
+%  caching policies in modern processors.},
+because writes are ordered only by
+data-dependencies for computing \emph{locations}, with no ordering needed
+on the side-effects themselves.
 
 
 
