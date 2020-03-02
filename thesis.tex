@@ -90,7 +90,21 @@
       \lstset{escapechar={\@},mathescape=true}
       \lstset{language=Haskell}
       \lstset{
-        morekeywords={letloc}
+        morekeywords={letloc},
+        deletekeywords={Int},
+        literate=
+        {\\\\}{{\char`\\\char`\\}}1
+        {>->}{>->}3
+        {>>=}{>>=}3
+        {->}{{$\rightarrow$}}2
+        {>=}{{$\geq$}}2
+        {<-}{{$\leftarrow$}}2
+        {<=}{{$\leq$}}2
+        {=>}{{$\Rightarrow$}}2
+        {|}{{$\mid$}}1
+        {forall}{{$\forall$}}1
+        {exists}{{$\exists$}}1
+        {...}{{$\cdots$}}3
       }
       \csname lst@SetFirstLabel\endcsname}
     {\csname lst@SaveFirstLabel\endcsname}
@@ -252,12 +266,12 @@ representations.
 %% industry practitioners have begun to look (again) at unifying internal and
 %% external memory representations \cite{cnf-icfp15,capnproto} and}
 
-Consider a simple tree data structure, written in a language that supports algebraic datatypes:
-%
-%\vspace{-1mm}
-{\begin{code}
-    data Tree = Leaf Int | Node Tree Tree
-\end{code}}
+Consider a simple tree data structure, written in a language that supports algebraic datatypes,
+where a tree is either a leaf with an integer or a node with two trees.
+
+\begin{code}
+  data Tree = Leaf Int | Node Tree Tree
+\end{code}
 %\vspace{-1mm}
 %
 %% \noindent
