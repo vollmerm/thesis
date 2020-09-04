@@ -2476,11 +2476,11 @@ opportunity for constant-sized regions.
 %% offset-based pointers.  For instance, if using the copying strategy
 
 
-\chapter{Applications and Evaluation}
-\label{chapter:applications}
+\section{Applications and Evaluation}
+\label{section:applications}
 \note{General overview of the kinds of things we tested in Gibbon, how fast they were, etc.}
 
-\section{Microbenchmarks}
+\subsection{Microbenchmarks}
 
 See \tabref{tab:litmus-table}.
 
@@ -2844,7 +2844,7 @@ take less than 440ms, but run together take 480ms.  Yet the latter time is still
 \end{table*}
 
 
-\section{Data Processing Benchmarks}
+\subsection{Data Processing Benchmarks}
 
 \note{Overview of how this technique can be applied to data processing programs.}
 \note{If data to be processed is already serialized then this avoids marshaling cost.}
@@ -2855,7 +2855,7 @@ take less than 440ms, but run together take 480ms.  Yet the latter time is still
   original form.}
  
 
-\subsection{Twitter JSON Benchmark}
+\subsubsection{Twitter JSON Benchmark}
 
 For a real data set, we
 use Twitter metadata consisting of user ID's and hashtags for all tweets posted
@@ -2908,7 +2908,7 @@ We process the 9.1M tweets in 0.39s.
   \label{fig:twitter_slowdown_plot}
 \end{figure}
 
-\subsection{Point Correlation}
+\subsubsection{Point Correlation}
 
 \note{Summarize Laith's point correlation benchmark (from ECOOP
   paper), updating the language to match the new terminology from
@@ -2981,7 +2981,7 @@ tree is relatively less, reducing the opportunity for improvement.
     pointer-based implementation.}
 \end{figure}
 
-\section{Abstract Syntax Trees}
+\subsection{Abstract Syntax Trees}
 
 \note{This is where my results for ASTs will eventually go.}
 \note{I can maybe put the Racket count nodes benchmark in here too, as a kind of
