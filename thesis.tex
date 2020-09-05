@@ -266,7 +266,7 @@ representations.
 %% industry practitioners have begun to look (again) at unifying internal and
 %% external memory representations \cite{cnf-icfp15,capnproto} and}
 
-\section{Overview}\label{sec:intro-overview}
+\section{Motivation}\label{sec:intro-motivation}
 
 Consider the simple tree data structure in \Figref{fig:haskell_tree}, written in
 a language that supports algebraic datatypes, where a tree is either a leaf with
@@ -307,6 +307,8 @@ sum t = case t of
 \caption{Function that sums leaf values in a binary tree}
 \label{fig:haskell_sumtree}
 \end{figure}
+
+\note{TODO: include C++ pointer-based sum function}
 
 But when represented on disk or sent over the wire, the same tree structure
 would not preserve pointers from a node to its children. Instead, the tree
@@ -455,6 +457,11 @@ data at $l^r$ and ascertain that represents an intermediate node.
 %
 Conversely, as we will see, to \emph{construct} data the type system must
 enforce that adjacent fields be serialized consecutively.
+
+\section{Overview}\label{sec:intro-overview}
+
+\note{Summarize the whole thesis here.}
+\note{Briefly introduce LoCal and Gibbon and tease some evaluation resluts.}
 
 \section{Background and Related Work}\label{sec:bg}
 
