@@ -183,13 +183,13 @@ This abstract page is required. Make sure to adhere to the word count and other 
 
 \chapter{Introduction}\label{chapter:intro}
 
-Many programs running today use heap object representations {\em fixed}
+Many programs running today use heap object representations that are {\em fixed}
 by the language runtime system.
 % , which are not free to vary based on the workload.
 For instance, the Java or Haskell runtimes dictate an object layout, and the
 compiler must stick to it for all programs.
 %
-And yet when humans optimize a program, one of their primary {\em levers on
+In contrast, when humans optimize a program, one of their primary {\em levers on
 performance} is changing data representation.  For example, an HPC programmer
 knows how to pack a regular tree into a byte array for more efficient
 access~\cite{makino90,goldfarb13sc,Meyerovich2011}.
@@ -204,15 +204,14 @@ insistence on a particular heap layout causes an impedance mismatch we know as
 %%   already used by incoming data~\cite{}, or a custom format designed by the
 %%   programmer, as in HPC applications~\cite{}.}
 %
-Yet, the alternative would seem to be writing low-level code to deal directly
-with specialized or serialized data layouts.  This is error-prone, making it a
-``hacky'' way to achieve performance optimization at the expense of safety and
-readability.
+At first glance, the only alternative would seem to be writing low-level code to
+deal directly with specialized or serialized data layouts, an error-prone way to
+achieve performance optimization at the expense of safety and readability.
 
-To ameliorate this tension we propose to reify {\em data layout} as an explicit
-part of the program.  We introduce a language, \ourcalc (which stands for {\em location
-  calculus}), whose type system directly encodes a byte-level
-layout for algebraic datatypes manipulated by the language.
+In my thesis I am proposing a way to ameliorate this tension: reify {\em data
+layout} as an explicit part of the program. I will introduce a language,
+\ourcalc (which stands for {\em location calculus}), whose type system directly
+encodes a byte-level layout for algebraic datatypes manipulated by the language.
 %
 A well-typed program consists of functions, data definitions, {\em and} 
 data representation choices, which
@@ -426,7 +425,7 @@ needed---and read out the appropriate data, all without the safety net of a
 type checker. Hence, writing code to work directly on the serialized data can
 be tedious and error-prone.
 
-We propose instead to write the above example in a language, \emph{\ourcalc},
+I propose instead to write the above example in a language, \emph{\ourcalc},
 expressly designed to use dense serializations for its values. The \ourcalc
 \il{sum} function in \Figref{fig:gibbon_sumtree} extends the simple functional
 one above with region and location annotations.
@@ -455,13 +454,14 @@ For instance, in the above program, we cannot
 access child node locations ($\locreg{l_a}{r}$,$\locreg{l_b}{r}$) until we correctly parse the input
 data at $l^r$ and ascertain that represents an intermediate node.
 %
-Conversely, as we will see, to \emph{construct} data the type system must
+Conversely, as I will show later, to \emph{construct} data the type system must
 enforce that adjacent fields be serialized consecutively.
 
 \section{Overview}\label{sec:intro-overview}
 
 \note{Summarize the whole thesis here.}
 \note{Briefly introduce LoCal and Gibbon and tease some evaluation resluts.}
+
 
 \section{Background and Related Work}\label{sec:bg}
 
