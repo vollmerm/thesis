@@ -8,7 +8,6 @@
 \usepackage{mathpartir}
 \usepackage{stmaryrd}
 \usepackage{hyperref}
-\usepackage[noabbrev]{cleveref}
 \usepackage{graphicx}
 \usepackage{subcaption}
 \usepackage{xspace}
@@ -21,6 +20,7 @@
 \let\th@plain\relax
 \makeatother
 \usepackage[thmmarks,thref,amsmath]{ntheorem}
+\usepackage[noabbrev]{cleveref}
 
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{lemma}[theorem]{Lemma}
@@ -194,9 +194,9 @@ performance} is changing data representation.  For example, an HPC programmer
 knows how to pack a regular tree into a byte array for more efficient
 access~\cite{makino90,goldfarb13sc,Meyerovich2011}.
 
-Whenever a program receives data from the network or disk, rigid
-insistence on a particular heap layout causes an impedance mismatch we know as
-{\em deserialization}.
+Furthermore, whenever a program receives data from the network or
+disk, rigid insistence on a particular heap layout causes an impedance mismatch
+we know as {\em deserialization}.
 %
 %% \note{Compilers normally dictate a standard heap representation for data
 %%   manipulated by programs.  Yet substantial performance gains can be had by
@@ -208,8 +208,8 @@ At first glance, the only alternative would seem to be writing low-level code to
 deal directly with specialized or serialized data layouts, an error-prone way to
 achieve performance optimization at the expense of safety and readability.
 
-In my thesis I am proposing a way to ameliorate this tension: reify {\em data
-layout} as an explicit part of the program. I will introduce a language,
+In my thesis I propose a way to ameliorate both of these concerns: reify {\em
+data layout} as an explicit part of the program. I will introduce a language,
 \ourcalc (which stands for {\em location calculus}), whose type system directly
 encodes a byte-level layout for algebraic datatypes manipulated by the language.
 %
@@ -243,15 +243,37 @@ wherever possible.}
 %% \rn{I think we should perhaps make this less LoCal centric since it is more
 %%   HiCal centric once we call it ``Gibbon2''.}
 
-The layout of a \ourcalc data constructor by default takes only one
-(unaligned) byte in memory and fields may be referred to \emph{either} by
-pointer indirections or unboxed into the parent object (serialized).  We can
-thus interpolate between fully serialized and fully pointer-based
+The layout of a \ourcalc data constructor by default takes only one (unaligned)
+byte in memory and fields may be referred to \emph{either} by pointer
+indirections or unboxed into the parent object (serialized). This allows
+programmers to interpolate between fully serialized and fully pointer-based
 representations.
 %
-{\ourcalc can thus serve as a flexible intermediate representation
-  for compilers or synthesis tools.}
+\ourcalc can thus serve as a flexible intermediate representation for compilers
+or synthesis tools.
+% , and I will show how it was used as the intermediate language
+% for the Gibbon compiler.
 
+Gibbon is one such compiler. Gibbon is an experimental compiler that
+automatically transforms high-level functional programs that operate on
+tree-like data into low-level C code that operates directly on serialized data.
+Internally, Gibbon represents programs in \ourcalc, so it is able to tune the
+memory layout of particular data structures to control precisely how and how
+much the data will be serialized. In general, Gibbon produces code that is often
+significantly faster than equivalent pointer-based code, with speedups of over
+$2\times$ compared to hand-optimized, pointer-based C code, and often much more
+than that compared to existing compilers for functional languages like Haskell
+and OCaml.
+
+\note{Briefly introduce Gibbon and tease some evaluation resluts.}
+
+This thesis will be broken down into three parts. \Cref{chapter:intro} (this
+chapter) gives an overview of \ourcalc, with background, motivation, and related
+work. \Cref{chapter:local} describes the language and presents a formal
+semantics for \ourcalc, as well as some extensions. Finally,
+\Cref{chapter:gibbon} presents the Gibbon compiler, which uses \ourcalc
+internally, and presents an evaluation of Gibbon's performance on various tasks.
+A full proof of type safety is included in \Cref{appendix:proof}.
 
 
 %% \section{Background}\label{sec:bg}
@@ -272,6 +294,7 @@ a language that supports algebraic datatypes, where a tree is either a leaf with
 an integer or a node with two trees.
 
 \begin{figure}
+\begin{subfigure}{\textwidth}
 \begin{code}
 -- A Tree is either:
 --  - a Leaf with an Int, or
@@ -280,6 +303,37 @@ data Tree = Leaf Int | Node Tree Tree
 \end{code}
 \caption{Haskell data type representing a binary tree}
 \label{fig:haskell_tree}
+\end{subfigure}
+\begin{subfigure}{\textwidth}
+\begin{code}
+sum :: Tree -> Int
+sum t = case t of
+          Leaf n   -> n
+          Node x y -> (sum x) + (sum y)
+\end{code}
+\caption{Function that sums leaf values in a binary tree}
+\label{fig:haskell_sumtree}
+\end{subfigure}
+\begin{subfigure}{\textwidth}
+\begin{lstlisting}[language=C++]
+int sumPacked (byte * &ptr) {
+  int ret = 0;
+  if (* ptr == LEAF) {
+    ptr++; // skip past leaf tag
+    ret = * (int*)ptr; // retrieve integer from leaf
+    ptr += sizeof(int); //skip past integer
+  } else { // tag must be node
+    ptr++; // skip past node tag
+    ret += sumPacked(ptr); // sum left sub-tree
+    ret += sumPacked(ptr); // sum right sub-tree
+  }
+  return ret;
+}
+\end{lstlisting}
+\caption{A low-level traversal of serialized tree data written in C++}
+\label{fig:cpp-example}
+\end{subfigure}
+
 \end{figure}
 
 In memory, each node in this tree is either a \il{Leaf} node, typically
@@ -296,16 +350,6 @@ When relying on the usual pointer-based representation, this data
 %\il{Node}s to their children, and
 can be readily traversed using standard idioms to perform computations such as summing all the leaf values, as shown in \Figref{fig:haskell_sumtree}.
 
-\begin{figure}
-\begin{code}
-sum :: Tree -> Int
-sum t = case t of
-          Leaf n   -> n
-          Node x y -> (sum x) + (sum y)
-\end{code}
-\caption{Function that sums leaf values in a binary tree}
-\label{fig:haskell_sumtree}
-\end{figure}
 
 \note{TODO: include C++ pointer-based sum function}
 
@@ -331,27 +375,6 @@ tags and \il{Node} data, and accumulating leaves into the \il{sum}.
 This traversal can be accomplished in existing languages, writing low-level
 buffer-processing code as in the C++ code given in \Figref{fig:cpp-example}.
 
-
-\begin{figure}
-\begin{lstlisting}[language=C++]
-int sumPacked (byte * &ptr) {
-  int ret = 0; 
-  if (* ptr == LEAF) {
-    ptr++; // skip past leaf tag
-    ret = * (int*)ptr; // retrieve integer from leaf
-    ptr += sizeof(int); //skip past integer
-  } else { // tag must be node
-    ptr++; // skip past node tag
-    ret += sumPacked(ptr); // sum left sub-tree
-    ret += sumPacked(ptr); // sum right sub-tree
-  }
-  return ret;
-}
-\end{lstlisting}
-\caption{A low-level traversal of serialized tree data written in C++}
-\label{fig:cpp-example}
-\end{figure}
-
 Essentially, this code operates as follows: \il{ptr} scans along the packed
 data structure. For each node type it encounters, it continues scanning
 through the node, retrieving the data it needs from the packed representation
@@ -364,40 +387,51 @@ still recursive; the program stack helps capture the tree structure of the
 data.
 %While this isn't strictly necessary for this function, other, more
 %complicated traversals may rely on reconstructing the structure.
-\note{TODO: fix up and include add1 tree example here}
-%% As another example, consider a function that traverses a binary tree as defined
-%% previously, returns a new binary tree such that each integer has been incremented
-%% by one. This is again straightforward to describe recursively in a language
-%% like Haskell:
 
-%% \begin{code}
-%%   add1 tr =
-%%     case tr of
-%%       Leaf n -> Leaf (n + 1)
-%%       Node a b -> Node (add1 a) (add1 b)
-%% \end{code}  
+\begin{figure}
+  \begin{subfigure}{\textwidth}
+\begin{code}
+add1 :: Tree -> Tree
+add1 tr =
+  case tr of
+    Leaf n -> Leaf (n + 1)
+    Node a b -> Node (add1 a) (add1 b)
+\end{code}
+    \caption{add1 in haskell}\label{fig:add1-haskell}
+  \end{subfigure}
 
-%% Like before, we can write a C++ function to do this same computation, only
-%% operating on and returning serialized binary trees. This new function will
-%% have to accept two arguments (pointers to the input and output byte arrays,
-%% respectively), and will additionally return a pointer.
+  \begin{subfigure}{\textwidth}
+\begin{lstlisting}[language=C++]
+char* add1(char* tin, char* tout) {
+  if (*tin == Leaf) {
+    *tout = Leaf;
+    tin++; tout++;
+    *(int*)tout = *(int*)tin + 1;
+    return (tin + sizeof(int));
+  } else {
+    *tout = Node;
+    tin++; tout++;
+    char* t2 = add1(tin,tout);
+    tout += (t2 - t);
+    return add1(t2,tout);
+  }
+}
+\end{lstlisting}
+    \caption{add1 in c++}\label{fig:add1-cpp}
+  \end{subfigure}
+\caption{add1 example}
+\end{figure}
 
-%% \begin{lstlisting}[language=C++]
-%% char* add1(char* tin, char* tout) {
-%%   if (*tin == Leaf) {
-%%     *tout = Leaf;
-%%     tin++; tout++;
-%%     *(int*)tout = *(int*)tin + 1;
-%%     return (tin + sizeof(int));
-%%   } else {
-%%     *tout = Node;
-%%     tin++; tout++;
-%%     char* t2 = add1(tin,tout);
-%%     tout += (t2 - t);
-%%     return add1(t2,tout);
-%%   }
-%% }
-%% \end{lstlisting}
+% \note{TODO: fix up and include add1 tree example here}
+As another example, consider a function that traverses a binary tree as defined
+previously, returns a new binary tree such that each integer has been incremented
+by one. This is again straightforward to describe recursively in a language
+like Haskell. \Figref{fig:add1-haskell}.
+
+Like before, we can write a C++ function to do this same computation, only
+operating on and returning serialized binary trees. This new function will
+have to accept two arguments (pointers to the input and output byte arrays,
+respectively), and will additionally return a pointer. \Figref{fig:add1-cpp}
 
 
 % \begin{comment}
@@ -456,11 +490,6 @@ data at $l^r$ and ascertain that represents an intermediate node.
 %
 Conversely, as I will show later, to \emph{construct} data the type system must
 enforce that adjacent fields be serialized consecutively.
-
-\section{Overview}\label{sec:intro-overview}
-
-\note{Summarize the whole thesis here.}
-\note{Briefly introduce LoCal and Gibbon and tease some evaluation resluts.}
 
 
 \section{Background and Related Work}\label{sec:bg}
@@ -593,7 +622,7 @@ library functions that the programmer must exploit~\cite{ren13cgo,ren14taco}.
 
 
 
-\chapter{The Location Calculus}
+\chapter{The Location Calculus}\label{chapter:local}
 
 \section{Overview}
 
@@ -1677,7 +1706,7 @@ equivalent to generating \ourcalc with reordered fields in the source program.
   in my thesis.}
 
 
-\chapter{The Gibbon Compiler}
+\chapter{The Gibbon Compiler}\label{chapter:gibbon}
 
 \section{Converting Functional Programs to the Location Calculus}\label{sec:infer-local}
 
@@ -3031,7 +3060,7 @@ tree is relatively less, reducing the opportunity for improvement.
 
 
 
-\chapter{Formalization and Type Safety Proof}
+\chapter{Formalization and Type Safety Proof}\label{appendix:proof}
 
 \section{Variables and Substitution}
 %
