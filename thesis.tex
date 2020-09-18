@@ -263,9 +263,11 @@ much the data will be serialized. In general, Gibbon produces code that is often
 significantly faster than equivalent pointer-based code, with speedups of over
 $2\times$ compared to hand-optimized, pointer-based C code, and often much more
 than that compared to existing compilers for functional languages like Haskell
-and OCaml.
+and OCaml. In addition to presenting \ourcalc, in this thesis I will cover
+the design and implementation of the Gibbon compiler, as well as an evaluation
+of the compiler on various benchmarks and applications.
 
-\note{Briefly introduce Gibbon and tease some evaluation resluts.}
+\note{TODO summarize some applications of Gibbon here}
 
 This thesis will be broken down into three parts. \Cref{chapter:intro} (this
 chapter) gives an overview of \ourcalc, with background, motivation, and related
@@ -273,7 +275,7 @@ work. \Cref{chapter:local} describes the language and presents a formal
 semantics for \ourcalc, as well as some extensions. Finally,
 \Cref{chapter:gibbon} presents the Gibbon compiler, which uses \ourcalc
 internally, and presents an evaluation of Gibbon's performance on various tasks.
-A full proof of type safety is included in \Cref{appendix:proof}.
+A full proof of type safety for the \ourcalc language is included in \Cref{appendix:proof}.
 
 
 %% \section{Background}\label{sec:bg}
@@ -475,6 +477,8 @@ sum [@\locreg{l}{r}@] t = case t of
 \caption{Function that sums the leaf values of a serialized binary tree}
 \label{fig:gibbon_sumtree}
 \end{figure}
+
+\note{TODO: include packed add1 gibbon function}
 
 This code operates on serialized data, taking locations of that data (input and
 output) as additional function arguments.  It is a {\em region-polymorphic}
@@ -1736,9 +1740,15 @@ this level, \ie{} for the human or tool to answer the question
 %  \end{itemize}
 %\end{itemize}
 
-This large space of future work is beyond the scope of this paper, but we nevertheless
-illustrate the process of
-integrating \ourcalc into Gibbon.
+% This large space of future work is beyond the scope of this paper, but we nevertheless
+% illustrate the process of
+% integrating \ourcalc into Gibbon.
+
+    All of these choices can be represented directly in \ourcalc, making it an
+    ideal intermediate language for a compiler. This chapter will describe Gibbon,
+    an experimental compiler that transforms functional programs to work on
+    (mostly) serialized data. Gibbon represents its programs in \ourcalc,
+    performing various analyses and transformations, then generates low-level C code.
 %% building a front-end above \ourcalc with one example
 %% tool: the {\em \lamadt} language and compiler.
 %
@@ -1754,7 +1764,7 @@ for example, the {\em unannotated} examples we've seen in this paper.
   monomorphic, strict functional programming language, and for
   simplicity it is first order, like \ourcalc.}
 % \mv{Future work: closures?}
-{In future-work, we plan to add support for a higher-order, polymorphic
+{In future-work, the plan is to add support for a higher-order, polymorphic
   front-end language through standard monomorphization and defunctionalization.
   (An interesting consequence of this will be that closures become regular
   datatypes, such that a list of closures could be serialized in a dense
