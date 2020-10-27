@@ -1,0 +1,1803 @@
+\section{Variables and Substitution}
+%
+We use the convention that all variables for binding values,
+locations, and regions are distinct, and maintain this invariant
+implicitly.
+%
+The bindings sites of variables are summarized by the following:
+%
+\begin{itemize}
+\item Variables for binding values $\var$ are bound by function definitions
+$\FD$ and pattern matches $\pat$.
+
+\item Location variables $\locreg{\loc}{\reg}$ are bound by type schemes $\TS$, pattern matches
+$\pat$, and $\keywd{letloc}$ binders.
+
+\item Region variables $\reg$ are bound by type schemes $\TS$, pattern
+matches $\pat$, and $\keywd{letregion}$ binders.
+\end{itemize}
+%
+The use sites of variables are summarized by the following:
+\begin{itemize}
+\item Variables for binding varlues $\var$ are used by values $\VAL$.
+
+\item Location variables $\locreg{\loc}{\reg}$ are used by concrete locations $\concreteloc{\reg}{\ind}{\locreg{\loc}{\reg}}$,
+the argument list of function applications
+$\fapp{\overharpoon{\locreg{l}{r}}}{\overharpoon{\VAL}}$, the location
+argument of constructor applications
+$\datacon{\DC}{\keywd{\locreg{\loc}{\reg}}}{\overharpoon{\VAL}}$,
+located types $\hTYP$, and located expressions $\LE$.
+
+\item Region varaibles $\reg$ are used in the same places as location variables.
+\end{itemize}
+%
+We use the following conventions for variable substitution:
+%
+\begin{itemize}
+\item $\subst{\EXPR}{x}{v}$: Substitute $v$ for $x$ in $e$. We let the notation extend to vectors such that
+$\subst{\EXPR}{\overharpoon{x}}{\overharpoon{v}}$ denotes the iterated substitution $\subst{\EXPR}{\overharpoon{x_1}}{\overharpoon{v_1}} \ldots \subst{}{\overharpoon{x_n}}{\overharpoon{v_n}}$, where $n = |\overharpoon{x}| = |\overharpoon{v}|$.
+
+\item $\subst{\EXPR}{\locreg{\loc_1}{\reg_1}}{\locreg{\loc_2}{\reg_2}}$: Substitute location variable $\locreg{\loc_2}{\reg_2}$ for $\locreg{\loc_1}{\reg_1}$ in $\EXPR$. We extend this notation to vectors of locations in the same fashion, as described above.
+
+\item $\subst{\EXPR}{\reg_1}{\reg_2}$ : Substitute region variable $\reg_2$ for $\reg_1$ in $\EXPR$. We extend this notation to vectors of locations in the same fashion, as described above.
+
+\item Finally, we extend the aforementioned notation so that
+  substitution can act on environments $\CENV$, $\AENV$, and $\NENV$,
+  e.g.,
+  $\subst{\CENV}{\locreg{\loc_1}{\reg_1}}{\locreg{\loc_2}{\reg_2}}$.
+\end{itemize}
+
+
+\section{Global Environments and Metafunctions}
+
+\begin{itemize}
+\item $Function(f)$: An environment that maps a function $f$ to its definition $\FD$.
+
+\item $Freshen(\FD)$: A metafunction that freshens all bound variables in function definition
+$\FD$ and returns the resulting function definition.
+
+\item $TypeOfCon(\DC):$ An environment that maps a data constructor to its type.
+
+\item $TypeOfField(\DC,i)$: A metafunction that returns the type of the \il{i}'th field
+of data constructor $\DC$.
+
+\item $ArgTysOfConstructor(\DC)$: An environment that maps a data constructor to its field types.
+
+\item $\allocptr{\reg}{\STOR}$: $\max \set{-1} \cup \set{ \indj \; | \; {(\reg \mapsto (\indj \mapsto \DC)) \in \STOR}}$.
+\end{itemize}
+
+\section{Well-formedness of the Store}
+\label{sec:well-formedness}
+
+The well formedness of the store is defined by the top-level judgement
+\begin{displaymath}
+\storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}
+\end{displaymath}
+whose definition itself uses three other judgements.
+%
+All of these judgements are summarized in Table~\ref{tbl:swf-judgements}.
+
+%\floatstyle{boxed}\restylefloat{table}
+\begin{table}
+\bgroup
+\def\arraystretch{1.2}
+\setlength\tabcolsep{0.5cm}
+\begin{tabular}{lclp{6cm}}
+ & \textbf{Judgement form} & \textbf{Section} &\textbf{Summary}
+ \\\\
+\parbox[t]{3.5cm}{Store \\ well formedness} & $\storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}$ &
+\ref{sec:well-formedness} &
+The store $\STOR$ along with location map $\MENV$ are well formed with respect to
+typing environments $\SENV$, $\CENV$, and $\AENV$.
+\\\\
+End witness & $\ewitness{\TYP}{\concreteloc{\reg}{\ind_{s}}{}}{\STOR}{\concreteloc{\reg}{\ind_{e}}{}}$ &
+\ref{sec:end-witness} &
+The store address $\concreteloc{\reg}{\ind_{e}}{}$ is the position one
+after the last cell of the tree of type $\TYP$ starting at
+$\concreteloc{\reg}{\ind_{s}}{}$ in store $\STOR$.
+\\\\
+\parbox[t]{3.5cm}{Constructor-application \\ well formedness}
+ & $\storewfcfa{\CENV}{\MENV}{\STOR}$ &
+\ref{sec:well-formedness-constructors} &
+All in-flight data-constructor applications in store $\STOR$ along with location map $\MENV$
+are well formed with respect to constructor-progress typing environment $\CENV$.
+\\\\
+\parbox[t]{3.5cm}{Allocation \\ well formedness} & $\storewfca{\AENV}{\NENV}{\MENV}{\STOR}$ &
+\ref{sec:well-formedness-allocation} &
+Allocation in store $\STOR$ along with location map $\MENV$ is well formed
+with respect to allocation-typing environments $\AENV$ and $\NENV$.
+\end{tabular}
+\egroup
+\caption{Summary of judgements used to establish well formedness of the store.}
+\label{tbl:swf-judgements}
+\end{table}
+
+\paragraph{Notation for references to well-formedness judgements}
+Because there are many requirements specified inside the various
+well-formedness judgements, we introduce notation for referring
+to requirements individually.
+%
+For example, the notation
+\refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc2}
+refers to the judgement
+\begin{align*}
+\storewfca{\AENV}{\NENV}{\MENV}{\STOR},
+\end{align*}
+specified in Section~\ref{sec:well-formedness-allocation},
+and in that judgement, rule number~\ref{wf:impl-linear-alloc2}.
+
+The definition of store well formedness follows.
+
+\paragraph{Judgement form}
+
+$\storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}$
+
+The well-formedness judgement specifies the valid layouts of the store by using the location
+map and the various environments from the typing judgement.
+%
+Rule~\ref{wf:map-store-consistency} specifies that, for each location in the store-typing environment,
+there is a corresponding concrete location in the location map and that concrete location satisfies
+a corresponding end-witness judgement.
+%
+Rules~\ref{wf:cfc} and~\ref{wf:ca} reference the judgements for well formedness concerning
+in-flight constructor applications (\secref{sec:end-witness}) and correct allocation in
+regions (\secref{sec:well-formedness-allocation}), respectively.
+%
+Finally, Rule~\ref{wf:impl1} specifies that the nursery and store-typing environments reference
+no common locations, which is a way of reflecting that each location is either in the process
+of being constructed and in the nursery, or allocated and in the store-typing environment, but
+never both.
+
+\paragraph{Definition}
+
+\begin{enumerate}
+
+    \item \label{wf:map-store-consistency} $ (\locreg{\loc}{\reg} \mapsto \TYP) \in \SENV \Rightarrow \\
+            ((\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind_1}{}) \in \MENV \wedge \\
+            \ewitness{\TYP}{\concreteloc{\reg}{\ind_1}{}}{\STOR}{\concreteloc{\reg}{\ind_2}{}})
+          $
+
+    \item \label{wf:cfc} $\storewfcfa{\CENV}{\MENV}{\STOR}$
+
+    \item \label{wf:ca} $\storewfca{\AENV}{\NENV}{\MENV}{\STOR}$
+
+    \item \label{wf:impl1} $dom(\SENV) \cap \NENV = \emptyset $
+\end{enumerate}
+
+\subsection{End-Witness judgement}
+\label{sec:end-witness}
+
+\paragraph{Judgement form}
+
+$\ewitness{\TYP}{\concreteloc{\reg}{\ind_{s}}{}}{\STOR}{\concreteloc{\reg}{\ind_{e}}{}}$
+
+The end-witness judgement specifies the expected layout in the store of a fully
+allocated data constructor.
+%
+Rule~\ref{ewitness:impl1} requires that the first cell store a constructor
+tag of the appropriate type.
+%
+Rule~\ref{ewitness:impl2} specifies the address of the cell one past the tag.
+%
+Rule~\ref{ewitness:impl3} recursively specifies the positions of the constructor
+fields.
+%
+Finally, Rule~\ref{ewitness:impl4} specifies that the end witness of
+the overall constructor is the address one past the end of either the
+tag, if the constructor has zero fields, or the final field,
+otherwise.
+
+\paragraph{Definition}
+
+\begin{enumerate}
+\item \label{ewitness:impl1} $\STOR(\reg)(\ind_s) = \DC'$ \; \text{such that} \\
+      $\; \DATA\;\TYP = \overharpoon{\DC_1 \; \overharpoon{\sTYP}_1\;} \; | \; \ldots \; | \; \DC' \; \overharpoon{\sTYP}' \; | \; \ldots \; | \; \overharpoon{\DC_m \; \overharpoon{\sTYP}_m\;}$
+
+\item \label{ewitness:impl4} $\overharpoon{w_0} = \ind_s + 1$
+
+\item \label{ewitness:impl2}
+  $\ewitness{\overharpoon{\TYP'_1}}{\concreteloc{\reg}{\overharpoon{w_0}}{}}{\STOR}{\concreteloc{\reg}{\overharpoon{w_1}}{}} \wedge$ \\
+  $\ewitness{\overharpoon{\TYP'_{j+1}}}{\concreteloc{\reg}{\overharpoon{w_j}}{}}{\STOR}{\concreteloc{\reg}{\overharpoon{w_{j+1}}}{}}$
+  \\ where $\indj \in \set{1,\ldots,n-1} ; n = | \overharpoon{\TYP'} |$
+
+\item \label{ewitness:impl3}
+  $\ind_e = \overharpoon{w_n}$
+\end{enumerate}
+
+\subsection{Well-formedness of constructor application}
+\label{sec:well-formedness-constructors}
+
+\paragraph{Judgement form}
+
+$\storewfcfa{\CENV}{\MENV}{\STOR}$
+
+The well-formedness judgement for constructor application specifies the various constraints
+that are necessary for ensuring correct formation of constructors, dealing with constructor
+application being an incremental process that spans multiple \ourcalc{} instructions.
+%
+Rule~\ref{wfconstr:constraint-start} specifies that, if a location corresponding to the
+first address in a region is in the constraint environment, then there is a corresponding
+entry for that location in the location map.
+%
+Rule~\ref{wfconstr:constraint-tag} specifies that, if a location corresponding to the address one past a constructor
+tag is in the constraint environment, then there are corresponding locations for the address
+of the tag and the address after in the location map.
+%
+Rule~\ref{wfconstr:constraint-after} specifies that, if a location corresponding to the address
+one past after a fully allocated constructor application is in the constraint environment,
+then there are corresponding locations for the address one past the constructor application
+and for the address of the start of that constructor application in the location map, as well as the existence
+of an end witness for that fully allocated location.
+
+\paragraph{Definition}
+
+\begin{enumerate}
+    \item \label{wfconstr:constraint-start} $ (\locreg{\loc}{\reg} \mapsto \startr{\reg}) \in \CENV \Rightarrow \\
+            (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{0}{}) \in \MENV $
+
+    \item \label{wfconstr:constraint-tag} $ (\locreg{\loc}{\reg} \mapsto (\locreg{\loc'}{\reg} + 1)) \in \CENV \Rightarrow
+            \\
+            (\locreg{\loc'}{\reg} \mapsto \concreteloc{\reg}{\ind_l}{})  \in \MENV \wedge \\
+            (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind_l + 1}{})  \in \MENV
+            $
+
+    \item \label{wfconstr:constraint-after} $ (\locreg{\loc}{\reg} \mapsto \afterl{\tyatlocreg{\TYP}{\locreg{\loc'}{\reg}}{\reg}}) \in \CENV \Rightarrow \\
+            ((\locreg{\loc'}{\reg} \mapsto \concreteloc{\reg}{\ind_1}{}) \in \MENV \wedge \\
+            \ewitness{\TYP}{\concreteloc{\reg}{\ind_1}{}}{\STOR}{\concreteloc{\reg}{\ind_2}{}} \wedge \\
+            (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind_2}{}) \in \MENV)
+            $
+
+\end{enumerate}
+
+\subsection{Well-formedness concerning allocation}
+\label{sec:well-formedness-allocation}
+
+\paragraph{Judgement form}
+
+$\storewfca{\AENV}{\NENV}{\MENV}{\STOR}$
+
+The well-formedness judgement for safe allocation specifies the various properties
+of the location map and store that enable continued safe allocation, avoiding in particular
+overwriting cells, which could, if possible, invalidate overall type safety.
+%
+Rule~\ref{wf:impl-linear-alloc} requires that, if a location is in both the allocation
+and nursery environments, i.e., that address represents an in-flight
+constructor application, then there is a corresponding location in the location
+map and the address of that location is the highest address in the store.
+%
+Rule~\ref{wf:impl-linear-alloc2} requires that, if there is an address in the allocation
+environment and that address is fully allocated, then the address of that location is the
+highest address in the store.
+%
+Rule~\ref{wf:impl-write-once} requires that, if there is an address in the nursery, then
+there is a corresponding location in the location map, but nothing at the corresponding
+address in the store.
+%
+Finally, Rule~\ref{wf:impl-empty-region} requires that, if there is a region that has been
+created but for which nothing has yet been allocated, then there can be no addresses
+for that region in the store.
+
+\paragraph{Definition}
+
+\begin{enumerate}
+    \item \label{wf:impl-linear-alloc} $ ((\reg \mapsto \locreg{\loc}{\reg}) \in \AENV \wedge \locreg{\loc}{\reg} \in \NENV) \Rightarrow \\
+          ((\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind}{}) \in \MENV \wedge
+%          \ind = \max \set{0} \cup \set{\indj \; | \; \concreteloc{\reg}{\indj}{} \in \MENV} \wedge \\
+          \ind > \allocptr{\reg}{\STOR})
+          $
+
+    \item \label{wf:impl-linear-alloc2} $ ((\reg \mapsto \locreg{\loc}{\reg}) \in \AENV \wedge
+    \, (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind_s}{}) \in \MENV \wedge \locreg{\loc}{\reg} \not \in \NENV \wedge
+    \, \ewitness{\TYP}{\concreteloc{\reg}{\ind_s}{}}{\STOR}{\concreteloc{\reg}{\ind_e}{}}) \Rightarrow \\
+          \ind_e > \allocptr{\reg}{\STOR}
+          $
+
+    \item \label{wf:impl-write-once} $ \locreg{\loc}{\reg} \in \NENV \Rightarrow \\
+          ((\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind}{}) \in \MENV \wedge \\
+          (\reg \mapsto (\ind \mapsto \DC)) \not \in \STOR)
+          $
+
+    \item \label{wf:impl-empty-region} $(\reg \mapsto \emptyset) \in \AENV \Rightarrow \\
+    \reg \not \in dom(\STOR)$
+\end{enumerate}
+
+\newcommand{\substlemmasubsts}[1]{\subst{#1}{\overharpoon{\var}}{\overharpoon{\VAL}} \subst{}{\overharpoon{\locreg{\loc}{\reg}}}{\overharpoon{\locreg{\loc'}{\reg'}}} \subst{}{\locreg{\loc}{\reg}}{\locreg{\loc'}{\reg'}}}
+
+\section{Progress and Preservation}
+\label{proof:typesafety}
+
+\begin{lemma}[Substitution lemma]
+  \label{lemma:substitution}
+  \begin{align*}
+  \text{If} \quad & \TENV \cup \set{\overharpoon{\var_1} \mapsto \overharpoon{\TYP_1} \ensuremath{@} \overharpoon{\locreg{\loc_1}{\reg_1}}, \ldots, \overharpoon{\var_n} \mapsto  \overharpoon{\TYP_n} \ensuremath{@} \overharpoon{\locreg{\loc_n}{\reg_n}}}; \SENV; \CENV; \AENV; \NENV \vdash \AENV'; \NENV'; \EXPR : \tyatlocreg{\TYP}{\loc}{\reg}\\
+  \text{and} \quad & \TENV; \SENV'; \CENV'; \AENV'; \NENV' \vdash \AENV'; \NENV'; \overharpoon{\VAL_i} : \overharpoon{\TYP_i} \ensuremath{@} \overharpoon{\locreg{\loc'_i}{\reg'_i}} \qquad \; i \in \set{1, \ldots, n}\\
+  \text{then} \quad & \TENV; \SENV'; \CENV'; \AENV'; \NENV' \vdash \AENV'''; \NENV'''; \substlemmasubsts{\EXPR} : \tyatlocreg{\TYP}{\loc'}{\reg'}\\
+   \text{where} \quad & \SENV = \SENV_0 \cup \set{\overharpoon{\locreg{\loc_1}{\reg_1}} \mapsto \overharpoon{\TYP_1}, \ldots, \overharpoon{\locreg{\loc_n}{\reg_n}} \mapsto \overharpoon{\TYP_n}}\\
+   \text{and} \quad & \forall_{(\var \mapsto \TYP'' \ensuremath{@} \locreg{\loc''}{\reg''}) \in \TENV} . (\locreg{\loc''}{\reg''} \mapsto \TYP'') \in \SENV_0 \\
+  \text{and} \quad & dom(\SENV) \cap \NENV = \emptyset\\
+  \text{and} \quad & \NENV = \NENV_0 \cup \locreg{\loc}{\reg}\\
+  \text{and} \quad & \SENV' = \SENV \cup \set{\overharpoon{\locreg{\loc'_1}{\reg'_1}} \mapsto \overharpoon{\TYP_1}, \ldots, \overharpoon{\locreg{\loc'_n}{\reg'_n}} \mapsto \overharpoon{\TYP_n}}\\
+  \text{and} \quad & \CENV' = \subst{\CENV}{\overharpoon{\locreg{\loc}{\reg}}}{\overharpoon{\locreg{\loc'}{\reg'}}} \subst{}{\locreg{\loc}{\reg}}{\locreg{\loc'}{\reg'}} \\
+  \text{and} \quad & \AENV' = \subst{\AENV}{\overharpoon{\locreg{\loc}{\reg}}}{\overharpoon{\locreg{\loc'}{\reg'}}} \subst{}{\locreg{\loc}{\reg}}{\locreg{\loc'}{\reg'}} \subst{}{\reg}{\reg'}\\
+  \text{and} \quad & \NENV' = \subst{\NENV}{\locreg{\loc}{\reg}}{\locreg{\loc'}{\reg'}}
+  \end{align*}
+\end{lemma}
+\begin{nproof}
+  The proof is by rule induction on the given typing derivation.
+  %
+    \begin{bcase} \tvar{}, \tconcreteloc{}\\
+    These cases discharge vacuously because
+    the corresponding typing judgements cannot establish that the expression $\EXPR$ has type
+    $\tyatlocreg{\TYP}{\loc}{\reg}$, as required by the premise of the lemma.
+    %
+    The reason is that the premise of the lemma also assumes that
+    $\locreg{\loc}{\reg} \in \NENV$ and $dom(\SENV) \cap \NENV = \emptyset$, but by inversion
+    on the respective typing judgements, it must be that $(\locreg{\loc}{\reg} \mapsto \TYP) \in \SENV$,
+    thereby resulting in a contradiction.
+  \end{bcase}
+
+  \begin{bcase}
+    \begin{mathpar}
+    \rtdatacon{}
+    \end{mathpar} \\
+    By inversion on the typing judgement, there are three proof obligations for this case.
+    %
+    The first one concerns the subtitution of
+    location $\locreg{\loc}{\reg}$, which changes the type of the
+    term $\EXPR$ from $\tyatlocreg{\TYP}{\loc}{\reg}$ to
+    $\tyatlocreg{\TYP}{\loc'}{\reg'}$.
+    %
+    The specific obligation is to establish that
+    all uses of $\locreg{\loc}{\reg}$ in the
+    typing judgement are properly substituted by $\locreg{\loc'}{\reg'}$, thereby
+    satisfying the corresponding parts of the typing judgement that need to
+    reflect the change in the result location.
+    %
+    The uses of $\locreg{\loc}{\reg}$ in the typing judgement
+    are the first argument of the constructor application,
+    the result type, the constraint environment $\CENV$, and environments $\AENV$, $\NENV$,
+    $\AENV'$, and $\NENV'$.
+    %
+    The corresponding updates are established by inspection of the various substitutions
+    in the consequent of the lemma, which affect $\EXPR$ and the typing environments.
+    %
+    The second obligation concerns the locations used by the typing judgement in $\CENV$, each
+    of which is substituted as needed in the environment $\CENV'$.
+
+    The third and final obligation is to establish typing judgements required by the premise of \tdatacon{}
+    that concern the arguments of the constructor application.
+    %
+    To distinguish the constructor arguments from the values $\overharpoon{\VAL}$ that are being substituted,
+    let the constructor arguments be $\overharpoon{\VAL'}$, and $m = |\overharpoon{\VAL'}|$.
+    %
+    Then the specific obligation is to establish the typing judgements
+    %
+    \begin{displaymath}
+       \TENV;\SENV';\CENV';\AENV';\NENV' \vdash \AENV';\NENV';\substlemmasubsts{\overharpoon{\VAL'_{k}}} : \overharpoon{\tyatlocreg{\TYP_{k}'}{\loc''_{k}}{\reg}},
+     \end{displaymath}
+     %
+     for all $k \in \set{1, \ldots, m}$, and for some suitable corresponding locations
+     $\locreg{\loc''_{k}}{\reg}$.
+     %
+     Each value $\overharpoon{\VAL'_k}$ is either a variable or a concrete location.
+    %
+    \begin{itemize}
+    \item Case $\overharpoon{\VAL'_k} = \yvar$, for some variable $\yvar$:\\
+      \begin{itemize}
+      \item Case $\yvar = \overharpoon{\var_{\indj}}$, for some $\indj$:\\
+        Now, the obligation is to establish that the value resulting from the substitution of $\yvar$, namely
+        $\overharpoon{\VAL_{\indj}}$, has type $\overharpoon{\TYP'_{k}} \ensuremath{@} \overharpoon{\locreg{\loc'_{\indj}}{\reg}}$.
+        %
+        From the premise of the lemma, we have that
+        \begin{displaymath}
+        \TENV; \SENV'; \CENV'; \AENV'; \NENV' \vdash \AENV'; \NENV'; \overharpoon{\VAL_j} : \overharpoon{\TYP_j} \ensuremath{@} \overharpoon{\locreg{\loc'_j}{\reg}},
+        \end{displaymath}
+        and, moreover, by inversion on \tdatacon{}, we can conclude that $\overharpoon{\TYP_j} = \overharpoon{\TYP'_k}$,
+        thereby establishing that
+       \begin{displaymath}
+        \TENV; \SENV'; \CENV'; \AENV'; \NENV' \vdash \AENV'; \NENV'; \overharpoon{\VAL_j} : \overharpoon{\TYP'_k} \ensuremath{@} \overharpoon{\locreg{\loc'_j}{\reg}},
+        \end{displaymath}
+        and thus discharging this case.
+      \item Case $\yvar \neq \overharpoon{\var_{\indj}}$, for all $\indj$:\\
+        This case discharges immediately by implication of the typing judgement of the
+        source term given in the premise of this lemma, and by inversion on \tvar{}.
+      \end{itemize}
+    \item Case $\overharpoon{\VAL'_k} = \concreteloc{\reg}{\ind'''}{\locreg{\loc''}{\reg}}$,
+      for some location $\locreg{\loc''}{\reg}$, $\ind'''$\\
+      \begin{itemize}
+      \item Case $\locreg{\loc''}{\reg} = \overharpoon{\locreg{\loc_{\indj}}{\reg}}$, for some
+        $\indj$:\\
+        The specific obligation is to establish the type of
+        the concrete location affected by the substitution of the location $\locreg{\loc''}{\reg}$
+        for $\overharpoon{\locreg{\loc'_{\indj}}{\reg}}$, that is,
+        \begin{displaymath}
+        \TENV; \SENV'; \CENV'; \AENV'; \NENV' \vdash \AENV'; \NENV'; \concreteloc{\reg}{\ind'''}{\overharpoon{\locreg{\loc'_{\indj}}{\reg}}} : \overharpoon{\TYP'_k} \ensuremath{@} \overharpoon{\locreg{\loc'_j}{\reg}}.
+        \end{displaymath}
+        The above follows from the facts $\SENV'(\overharpoon{\locreg{\loc'_{\indj}}{\reg}}) = \overharpoon{\TYP_{\indj}}$
+        and $\overharpoon{\TYP_j} = \overharpoon{\TYP'_k}$, using
+        similar reasoning to the previous case, thus discharging this case.
+      \item Case $\locreg{\loc''}{\reg} = \locreg{\loc}{\reg}$:\\
+      Impossible, because $\locreg{\loc''}{\reg} \in dom(\SENV)$, but from the premise of this lemma,
+      $\locreg{\loc}{\reg} \in \NENV$ and $dom(\SENV) \cap \NENV = \emptyset$.
+      \item Case $\locreg{\loc''}{\reg} \neq \overharpoon{\locreg{\loc_{\indj}}{\reg}}$, for all
+        $\indj$, and $\locreg{\loc''}{\reg} \neq \locreg{\loc}{\reg}$:\\
+        This case discharges straightforwardly because, by inversion on \tconcreteloc{},
+        $(\locreg{\loc''}{\reg} \mapsto \TYP'') \in \SENV$, thus implying that
+        $(\locreg{\loc''}{\reg} \mapsto \TYP'') \in \SENV'$,
+        as needed.
+      \end{itemize}
+    \end{itemize}
+  \end{bcase}
+
+  \begin{bcase}
+    \begin{mathpar}
+    \rtlet{}
+    \end{mathpar} \\
+    This case discharges via straightforward uses of the induction hypothesis
+    for the let-bound expression and the body.
+  \end{bcase}
+
+
+  \begin{bcase} \tlregion{}, \tllstart{}, \tlltag{}, \tllafter{}, \tapp{}, \tcase{} \\
+  These remaining cases discharge by similar uses of the induction hypothesis.
+  \end{bcase}
+
+$\blacksquare$
+\end{nproof}
+
+\begin{lemma}[Progress]
+  \label{lemma:progress}
+  \begin{displaymath}
+  \begin{aligned}
+  \text{if} \;\; & \emptyset;\SENV;\CENV;\AENV;\NENV \vdash \AENV';\NENV';\EXPR : \hTYP \\
+  \text{and} \;\; & \storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR} \\
+  \text{then} \;\; & \EXPR \; \mathit{value} \\
+  \text{else} \;\; & \STOR;\MENV;\EXPR \stepsto \STOR';\MENV';\EXPR'
+  \end{aligned}
+  \end{displaymath}
+\end{lemma}
+
+\begin{nproof}
+  The proof is by rule induction on the given typing derivation.
+  %
+  \begin{bcase}
+    \begin{mathpar}
+    \rtdatacon{}
+    \end{mathpar} \\
+
+    Because $\EXPR = \datacon{\DC}{\keywd{\locreg{\loc}{\reg}}}{\overharpoon{\VAL}}$ is not
+    a value, the proof obligation is to show that there is a rule in the dynamic semantics whose
+    left-hand side matches the machine configuration $\STOR;\MENV;\EXPR$.
+    %
+    The only rule that can match is \ddatacon{}, but to establish the
+    match, there remains one obligation, which is obtained
+    by inversion on \ddatacon{}.
+    %
+    The particular obligation is to establish that
+    $\concreteloc{\reg}{\ind}{} = \MENV(\locreg{\loc}{\reg})$,
+    for some $\ind$.
+    %
+    To obtain this result, we need to use the well formedness
+    of the store, given by the premise of this lemma, and in particular rule
+    \refwellformed{sec:well-formedness-allocation}{wf:impl-write-once}.
+    %
+    But a precondition for using
+    \refwellformed{sec:well-formedness-allocation}{wf:impl-write-once} that
+    the location is in the nursery, i.e., $\locreg{\loc}{\reg} \in \NENV$.
+    %
+    This precondition is satisfied by inversion on \tdatacon{}.
+    %
+    Our application of rule \refwellformed{sec:well-formedness-allocation}{wf:impl-write-once}
+    therefore yields the desired result, thereby discharging this case.
+  \end{bcase}
+
+  \begin{bcase}
+    \begin{mathpar}
+    \rtllafter{}
+    \end{mathpar}
+
+    Because $\EXPR
+    = \letloc{\locreg{\loc}{\reg}}{\afterl{\tyatlocreg{\TYP'}{\loc_{1}}{\reg}}}{\EXPR'}$
+    is not a value, the proof obligation is to show that
+    there is a rule in the dynamic semantics whose left-hand side matches the machine
+    configuration $\STOR;\MENV;\EXPR$.
+    %
+    The only rule that can match is \dletlocafter{}, but the match is
+    dependent on two further obligations, which are
+    implied by inversion on \dletlocafter{}.
+    %
+    The first one is to establish that
+    $\concreteloc{\reg}{\ind}{} = \MENV(\locreg{\loc_1}{\reg})$.
+    %
+    To do so, we need to use
+    rule \refwellformed{sec:well-formedness}{wf:map-store-consistency}
+    of the well-formedness of the store.
+    %
+    This rule requires that $\SENV(\locreg{\loc_1}{\reg}) = \TYP'$,
+    which is established by inversion on \tllafter{}.
+    %
+    As such,
+    we have $(\loc_1 \mapsto \concreteloc{\reg}{\ind}{}) \in \MENV$, as needed.
+    %
+    The second and final obligation is to establish that, for some $\indj$,
+    $\ewitness{\TYP'}{\concreteloc{\reg}{\ind}{}}{\STOR}{\concreteloc{\reg}{\indj}{}}$.
+    %
+    Again, we use well-formedness
+    rule \refwellformed{sec:well-formedness}{wf:map-store-consistency} to
+    discharge the obligation, and thus this case.
+    %
+  \end{bcase}
+
+  \begin{bcase}
+    \tlltag\\ Similar to the previous case.
+  \end{bcase}
+
+  \begin{bcase}
+    \label{lemma:progress:trivials}
+    \tllstart, \tlregion, \tapp \\ These cases discharge immediately because \dletlocstart{},
+    \dletregion{}, and \dapp{} match their corresponding machine configurations unconditionally.
+  \end{bcase}
+
+  \begin{bcase}
+    \tvar, \tconcreteloc \\ These cases discharge immediately because $\EXPR$ is a value.
+  \end{bcase}
+
+  \begin{bcase}
+    \begin{mathpar}
+    \rtlet{}
+  \end{mathpar}
+
+     Because $\EXPR = \letpack{\var : \tyatlocreg{\TYP_1}{\loc_1}{\reg_1}}{\EXPR_1}{\EXPR_2}$ is not a value, the proof obligation is to
+    show that there is a rule in the dynamics whose left-hand side matches the machine
+    configuration $\STOR;\MENV;\EXPR$.
+    %
+    If $\EXPR_1$ is a value, then the rule discharges immediately because \dletval{} matches
+    $\EXPR$ unconditionally.
+    %
+    Otherwise, if $\EXPR_1$ is not a value, then the only other rule that can match
+    is \dletexp.
+    %
+    To match \dletexp{}, the only requirement is to match the left-hand side of the rule
+    $\STOR;\MENV;\EXPR_1 \stepsto \STOR';\MENV';\EXPR'_1$ in the premise, for some $\STOR'$, $\MENV'$, and $\EXPR'_1$.
+    %
+    To obtain this result, we need to use the induction hypothesis, which is in this instance
+    %
+    \begin{displaymath}
+    \begin{aligned}
+      \text{if} \;\; & \emptyset;\SENV;\CENV;\AENV;\NENV \vdash \AENV';\NENV';\EXPR_1 : \tyatlocreg{\TYP}{\loc_1}{\reg_1} \\
+      \text{and} \;\; & \storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR} \\
+      \text{then} \;\; & \EXPR_1 \; \mathit{value} \\
+      \text{else} \;\; & \STOR;\MENV;\EXPR_1 \stepsto \STOR';\MENV';\EXPR'_1.
+    \end{aligned}
+    \end{displaymath}
+    %
+    By inversion on \tlet{}, we have $\emptyset;\SENV;\CENV;\AENV;\NENV \vdash \AENV';\NENV';\EXPR_1: \tyatlocreg{\TYP_1}{\loc_1}{\reg_1}$, and, from the premise of this lemma, we have
+    $\storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}$.
+    %
+    Thus, by the consequent of the  induction hypothesis, we have that either $\EXPR_1$ is a value (which we have
+    already ruled out) or that
+    $\STOR;\MENV;\EXPR_1 \stepsto \STOR';\MENV';\EXPR'_1$, thereby discharging this case.
+
+  \end{bcase}
+
+  \begin{bcase}
+    \begin{mathpar}
+    \rtcase{} \\
+    \text{and} \\
+    \rtpat{}
+  \end{mathpar}
+
+    Because the given expression $\EXPR = \case{\VAL}{\overharpoon{\pat}}$ is not a value, the proof obligation
+    is to show that there is a rule in the dynamic semantics whose left-hand side matches the machine configuration $\STOR;\MENV;\EXPR$.
+    %
+    The only rule that can match is \dcase{}, and
+    there are three requirements to match \dcase{}.
+    %
+    The first of which is that the value
+    $\VAL$ is a concrete location of the form $\concreteloc{\reg'}{\ind}{\locreg{\loc'}{\reg'}}$.
+    %
+    Any value $\VAL$ is, by inspection of the grammar of \ourcalc{}, either a variable or a concrete location.
+    %
+    But because $\VAL$ is well typed with respect to the
+    empty typing environment $\TENV = \emptyset$, the value $\VAL$
+    cannot be a variable in this instance, owing to inversion on \tvar{} and \tconcreteloc{},
+    thereby ensuring $\VAL$ is a concrete
+    location, and thus discharging this requirement.
+    %
+    The second requirement for \dcase{} is that the tag is in the
+    expected location in the store, i.e., $\STOR(\reg')(\ind) = \DC$.
+    %
+    To satisfy this requirement, we start by using the jugement $\storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}$,
+    from the premise of this lemma,
+    and in particular, unpacking from this judgement the property \refendwitness{sec:end-witness}{ewitness:impl1}.
+    %
+    To use this property, we need that $(\locreg{\loc'}{\reg'} \mapsto \TYP') \in \SENV$, which
+    is given by inversion on the given typing rule \tcase{}.
+    %
+    From the unpacking, we obtain that
+    \begin{align}
+    (\locreg{\loc'}{\reg'} \mapsto \concreteloc{\reg'}{\ind}{} \in \MENV) \wedge \\
+      \ewitness{\TYP'}{\concreteloc{\reg'}{\ind}{}}{\STOR}{\concreteloc{\reg'}{\ind'}{}} \label{prf-loc1}.
+      \end{align}
+    %
+    From the end-witness judgement, in particular,
+    \refendwitness{sec:end-witness}{ewitness:impl1},
+    we establish that
+    $\STOR(\reg')(\ind) = \DC$, thereby discharging the second requirement.
+    %
+    The third and final requirement for \dcase{} is that the arguments succeeding
+    the tag are in the expected locations, i.e.,
+        \begin{align*}
+    & \ewitness{\overharpoon{\TYP'_{1}}}{\concreteloc{\reg'}{\ind + 1}{}}{\STOR}{\concreteloc{\reg'}{\overharpoon{w_1}}{}} \wedge \\
+    & \ewitness{\overharpoon{\TYP'_{j+1}}}{\concreteloc{\reg'}{\overharpoon{w_j}}{}}{\STOR}{\concreteloc{\reg'}{\overharpoon{w_{j+1}}}{}}
+    \end{align*}
+    %
+    The above is established by expanding the judgement obtained in~\ref{prf-loc1}, namely
+    $\ewitness{\TYP'}{\concreteloc{\reg'}{\ind}{}}{\STOR}{\concreteloc{\reg'}{\ind'}{}}$,
+    using in particular, the end-witness rule
+    \refendwitness{sec:end-witness}{ewitness:impl2} to obtain the
+    needed judgements.
+    %
+    This final requirement discharges the case.
+  \end{bcase}
+
+$\blacksquare$
+
+\end{nproof}
+
+\begin{lemma}[Preservation]
+  \label{lemma:preservation}
+  \begin{displaymath}
+    \begin{aligned}
+      \text{If} \;\; & \emptytenv;\SENV;\CENV;\AENV;\NENV \vdash \AENV';\NENV';\EXPR : \hTYP \\
+      \text{and} \;\; & \storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}\\
+      \text{and} \;\; & \STOR;\MENV;\EXPR \stepsto \STOR';\MENV';\EXPR' \\
+      \text{then for some} \;\; & \SENV' \supseteq \SENV, \CENV' \supseteq \CENV ,\\
+      & \emptytenv;\SENV';\CENV';\AENV';\NENV' \vdash \AENV'';\NENV'';\EXPR' : \hTYP \\
+      \text{and} \;\; & \storewf{\SENV'}{\CENV'}{\AENV'}{\NENV'}{\MENV'}{\STOR'}\\
+    \end{aligned}
+  \end{displaymath}
+\end{lemma}
+
+\begin{nproof}
+  The proof is by rule induction on the given derivation of the dynamic semantics.
+
+  \begin{bcase}
+    \begin{mathpar}
+    \rddatacon{}
+    \end{mathpar}
+    \begin{itemize}
+    \item
+    The first of two proof obligations is to show that
+    the result $\EXPR' = \concreteloc{\reg}{\ind}{\locreg{\loc}{\reg}}$ of
+    the given step of evaluation is well typed, that is,
+    \begin{displaymath}
+    \emptytenv;\SENV';\CENV';\AENV';\NENV' \vdash \AENV''; \NENV''; \concreteloc{\reg}{\ind}{\locreg{\loc}{\reg}} : \hTYP,
+    \end{displaymath}
+    where $\hTYP = \tyatlocreg{\TYP}{\loc}{\reg}$.
+    %
+    As implied by inversion on \tconcreteloc{}, the only obligation is to establish
+    that $\SENV'(\locreg{\loc}{\reg})=\TYP$.
+    %
+    This obligation discharges by appropriately instantiating typing
+    environments: $\SENV' = \SENV \cup \set{\locreg{\loc}{\reg} \mapsto \TYP}$, so that $\SENV' \supseteq \SENV$ and
+    $\SENV'(\locreg{\loc}{\reg})=\TYP$, and $\CENV' = \CENV$, so that $\CENV' \supseteq \CENV$.
+    %
+    \item Given the instantiations of $\SENV'$ and $\CENV'$ used by the previous step, the second obligation
+    for this proof case is to show that
+    \begin{displaymath}
+    \storewf{\SENV'}{\CENV}{\AENV'}{\NENV'}{\MENV}{\STOR'}.
+    \end{displaymath}
+    The individual requirements, labeled
+    \refwellformed{sec:well-formedness}{wf:map-store-consistency} -
+        \refwellformed{sec:well-formedness}{wf:ca},
+        are handled by the following case analysis.
+    \begin{itemize}
+      \item
+      Case (\refwellformed{sec:well-formedness}{wf:map-store-consistency}):
+      for each $(\locreg{\loc'}{\reg} \mapsto \TYP) \in \SENV'$, there exists some $\ind_1, \ind_2$ such that
+      \begin{align}
+      (\locreg{\loc'}{\reg'} \mapsto \concreteloc{\reg'}{\ind_1}{}) \in \MENV \wedge \\
+        \ewitness{\TYP}{\concreteloc{\reg'}{\ind_1}{}}{\STOR'}{\concreteloc{\reg'}{\ind_2}{}} \label{prf:dc-cj2}
+      \end{align}
+      %
+      The first conjunct above discharges
+      by inversion on \ddatacon{}, but
+      to establish the second one, we need to distinguish
+      between the case in which the given location $\locreg{\loc'}{\reg'}$ is the one
+      affected by the constructor application, or not.
+      \begin{itemize}
+      \item Case $\locreg{\loc'}{\reg'} = \locreg{\loc}{\reg}$: \\
+        For this case, the obligation is to show that the constructor being
+        allocated by the constructor application, namely $\locreg{\loc}{\reg}$,
+        has the end witness given above.
+        %
+        As such, for this case, it is the case that $\reg' = \reg$ and $\ind_1 = \ind$, which is
+        a consequence of inversion on \ddatacon{}.
+        %
+        To establish the end witness, the first obligation therein, namely \refendwitness{sec:end-witness}{ewitness:impl1},
+        is to establish $\STOR'(r)(i) = \DC$.
+        %
+        This obligation discharges by inspection of $\STOR'$, which is obtained by inversion on \ddatacon{}.
+        %
+        The second part is to establish the requirement
+        \refendwitness{sec:end-witness}{ewitness:impl2} of the end-witness
+        judgement, which pertains to the arguments passed to the constructor.
+        The specific obligation is, if $n = | \overharpoon{\TYP'} | \geq 1$, then
+           \begin{align}
+           \ewitness{\overharpoon{\TYP'_1}}{\concreteloc{\reg}{\ind + 1}{}}{\STOR'}{\concreteloc{\reg}{\overharpoon{w_1}}{}} \wedge \label{prf:ew-req1} \\
+           \ewitness{\overharpoon{\TYP'_{j+1}}}{\concreteloc{\reg}{\overharpoon{w_j}}{}}{\STOR'}{\concreteloc{\reg}{\overharpoon{w_{j+1}}}{}} \label{prf:ew-req2}
+           \end{align}
+           for some $\overharpoon{w}$, where
+           $\indj \in J = J' - \set{n}$, $\indj' \in J' = \set{1,\ldots,n}$, and
+           $\overharpoon{\TYP'} = \kargtys(\DC)$.
+           %
+           To establish the above, we need
+           to reason backward from what
+           the corresponding typing rules establish regarding the
+           arguments passed to the constructor application.
+           %
+           First, we establish that, for each location corresponding to a constructor argument
+           $\overharpoon{\locreg{\loc}{\reg}_{\indj'}}$,
+           there is a corresponding mapping in the store-typing environment, i.e.,
+           $(\overharpoon{\locreg{\loc}{\reg}_{\indj'}} \mapsto \overharpoon{\TYP_{\indj'}'}) \in \SENV$.
+           %
+           To establish these mappings, we first
+           obtain by inversion on \tdatacon{} that the
+           constructor arguments are well typed:
+           \begin{align*}
+           \emptytenv;\SENV;\CENV;\AENV;\NENV \vdash \AENV;\NENV;\overharpoon{\VAL_{\indj'}} : \overharpoon{\tyatlocreg{\TYP_{\indj'}'}{\loc_{\indj'}}{\reg}}
+           \end{align*}
+           %
+           Each value $\overharpoon{\VAL_{\indj'}}$ is either a variable or a concrete location, and
+           as such, by inversion on the typing rules \tvar{} and \tconcreteloc{}, respectively,
+           we establish the required mappings in $\SENV$.
+           %
+           Thus, we can now combine the well-formedness
+           of the store in the premise of this lemma,
+           in particular requirement \refwellformed{sec:well-formedness}{wf:map-store-consistency},
+           with the mappings of constructor arguments in $\SENV$ to establish
+           the end witnesses in $\overharpoon{\ind}$ corresponding to the constructor arguments:
+           %
+           \begin{align}
+           (\overharpoon{\locreg{\loc}{\reg}_{\indj'}} \mapsto \concreteloc{\reg}{\overharpoon{\ind_{\indj'}}}{}) \in \MENV \wedge \label{prf:dc-ew1} \\
+           \ewitness{\overharpoon{\TYP_{\indj'}'}}{\concreteloc{\reg}{\overharpoon{\ind_{\indj'}}}{}}{\STOR}{\concreteloc{\reg}{\overharpoon{\ind_{\indj' + 1}}}{}} \label{prf:dc-ew2}
+           \end{align}
+           %
+           We first address the obligation pertaining to the first constructor argument,
+           and then the remaining ones.
+           %
+           From inversion on \tdatacon{}, we establish a mapping for the location of the
+           first constructor argument.
+           %
+           \begin{align*}
+           \CENV(\overharpoon{\locreg{\loc}{\reg}_1}) = \locreg{\loc}{\reg} + 1
+           \end{align*}
+           %
+           Now, using this result, we can establish from well
+           formedness rule \refwellformed{sec:well-formedness-constructors}{wfconstr:constraint-tag}
+           that the following mappings exist in the location environment.
+           %
+           \begin{align*}
+           (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind}{})  \in \MENV \wedge \\
+                      (\overharpoon{\locreg{\loc}{\reg}_1} \mapsto \concreteloc{\reg}{\ind + 1}{})  \in \MENV
+           \end{align*}
+           %
+           Next, combining the fact from line \ref{prf:dc-ew1} above regarding $\overharpoon{\locreg{\loc}{\reg}_1}$, the
+           end witness corresponding to $\overharpoon{\ind_1}$ from the end witnesses of
+           constructor arguments line~\ref{prf:dc-ew2} from above, we
+           establish the requirement on line \ref{prf:ew-req1} above, such that $\overharpoon{w_1} = \overharpoon{i_1}$, i.e.,
+           %
+           \begin{align}
+           \ewitness{\overharpoon{\TYP'_1}}{\concreteloc{\reg}{\ind + 1}{}}{\STOR}{\concreteloc{\reg}{\overharpoon{w_1}}{}} \label{prf:dc-ew-f1}.
+           \end{align}
+%           Notice that the end witness of the first field is by definition given above $\overharpoon{w_1}$.
+
+           For the remaining constructor arguments, the structure of the proof is similar.
+           %
+           We establish mappings in $\CENV$ for the locations of these constructor arguments
+           by inversion on \tdatacon{}.
+           %
+           \begin{align*}
+           \CENV(\overharpoon{\locreg{\loc}{\reg}_{\indj+1}}) = \afterl{\overharpoon{\TYP'_{\indj}} \ensuremath{@} \overharpoon{\locreg{\loc}{\reg}_{\indj}}}
+           \end{align*}
+           %
+           The following end witnesses $\overharpoon{\ind}$ are established by combining the property
+           on the constraint environment
+           with the property
+           \refwellformed{sec:well-formedness-constructors}{wfconstr:constraint-after},
+           which is obtained from the well formedness of the store in the premise of this lemma.
+           \begin{align*}
+           ((\overharpoon{\locreg{\loc}{\reg}_{\indj}} \mapsto \concreteloc{\reg}{\overharpoon{\ind_{\indj}}}{}) \in \MENV \wedge \\
+                       \ewitness{\overharpoon{\TYP'_{\indj}}}{\concreteloc{\reg}{\overharpoon{\ind_{\indj}}}{}}{\STOR}{\concreteloc{\reg}{\overharpoon{\ind_{\indj+1}}}{}} \wedge \\
+                       (\overharpoon{\locreg{\loc}{\reg}_{\indj+1}} \mapsto \concreteloc{\reg}{\overharpoon{\ind_{\indj+1}}}{}) \in \MENV)
+           \end{align*}
+           %
+           To isolate the indices of any constructor arguments succeeding the
+           first argument, we let $\indj'' \in J - \set{1}$, and thus deduce
+           from the above that the end witnesses
+           \begin{align*}
+           \ewitness{\overharpoon{\TYP_{\indj''+1}'}}{\concreteloc{\reg}{\overharpoon{\ind_{\indj''+1}}}{}}{\STOR}{\concreteloc{\reg}{\overharpoon{\ind_{\indj'' + 2}}}{}}.
+           \end{align*}
+           %
+           exist.
+           %
+           We obtain the needed result for the remaining end witnesses
+           by instantiating for $\overharpoon{w}$, yielding
+           \begin{align}
+           \ewitness{\overharpoon{\TYP_{\indj''+1}'}}{\concreteloc{\reg}{\overharpoon{w_{\indj''}}}{}}{\STOR}{\concreteloc{\reg}{\overharpoon{w_{\indj'' + 1}}}{}} \label{prf:dc-ew-f2}.
+           \end{align}
+           %
+           The original end witness required by~\ref{prf:dc-cj2} is now established by letting
+           $\ind_1 = \ind$ and $\ind_2 = \overharpoon{w_{n+1}}$.
+
+           Finally, to discharge this case, the end witnesses of the constructor
+           arguments established in lines~\ref{prf:dc-ew-f1} and~\ref{prf:dc-ew-f2}
+           need to hold for the new store
+           $\STOR' = \STOR \cup \set{\reg \mapsto (\ind \mapsto \DC)}$.
+           %
+           To this end, in $\STOR'$, the newly
+           written tag at address $\ind$ cannot overlap with the cells
+           occupied by any of the constructor arguments.
+           %
+           Therefore, the desired end witnesses exist in $\STOR'$, thereby
+           discharging this case.
+      \item Case $\locreg{\loc'}{\reg'} \neq \loc$: \\
+      This case requires we establish that, for such a given location $\locreg{\loc'}{\reg'}$, its
+      corresponding end witness in the original store $\STOR$ also exists
+      in the new store, $\STOR'$, that is, supposing $(\locreg{\loc'}{\reg'} \mapsto \concreteloc{\reg'}{\ind_1}{}) \in \MENV$, then $\ewitness{\TYP}{\concreteloc{\reg'}{\ind_1}{}}{\STOR}{\concreteloc{\reg'}{\ind_2}{}}$ implies $\ewitness{\TYP}{\concreteloc{\reg'}{\ind_1}{}}{\STOR'}{\concreteloc{\reg'}{\ind_2}{}}$.
+      %
+      But the only way that any such end witness can be invalidated
+      is if the write of the constructor tag at index $\ind$ in
+      $\STOR' = \STOR \cup \set{\reg \mapsto (\ind \mapsto \DC)}$ affects
+      any address in the end witness corresponding
+      to location $\locreg{\loc'}{\reg'}$, that is, any address
+      in the right-open range $[\ind_1, \ind_2)$.
+      %
+      The proof obligation therefore amounts to ruling out
+      aliasing, that is, $\ind$ falling in the range
+      $[\ind_1, \ind_2)$.
+      %
+      To this end, we start by working backwards from the typing of
+      the location $\locreg{\loc}{\reg}$, which corresponds to address $\ind$, the (only) address
+      written by the constructor application.
+      %
+      By inversion on \tdatacon{}, we establish that $\locreg{\loc}{\reg} \in \NENV$.
+      %
+      As such, given the well formedness of the store $\STOR$ in the premise
+      of this lemma, we obtain
+      from \refwellformed{sec:well-formedness-allocation}{wf:impl-write-once}
+      that
+      $(\reg \mapsto (\ind \mapsto \DC)) \not \in \STOR$.
+      %
+      However, by the end-witness rule, for each $\indj \in [\ind_1, \ind_2)$,
+      there exists a mapping from the address in the original store to its constructor tag
+      $\DC_j$, which is
+      $(\reg \mapsto (\indj \mapsto \DC_j)) \in \STOR$.
+      %
+      Therefore, the end witness judgement remains valid in store $\STOR'$,
+      thus discharging this case.
+      \end{itemize}
+      \item Case (\refwellformed{sec:well-formedness}{wf:cfc}):
+      \begin{align*}
+      \storewfcfa{\CENV}{\MENV}{\STOR'}
+      \end{align*}
+      The first two proof obligations of this judgement, namely \refwellformed{sec:well-formedness-constructors}{wfconstr:constraint-start} and \refwellformed{sec:well-formedness-constructors}{wfconstr:constraint-tag}, discharge immediately, because the environments used by these
+      rules are unaffected in a data-constructor application.
+      %
+      The only remaining obligation is \refwellformed{sec:well-formedness-constructors}{wfconstr:constraint-after}, because that requirement is affected by the write of the constructor tag, which is reflected in the new store $\STOR'$.
+      %
+      The obligation is to establish the preservation of the
+      end witnesses of the locations in the domain of $\CENV$.
+      %
+      A similar proof obligation was already addressed by the proof of Property~\ref{prf:dc-cj2},
+      in particular the subcase for $\locreg{\loc'}{\reg'} \neq \locreg{\loc}{\reg}$.
+      %
+      The only difference in that case is the locations range over the
+      domain of the store-typing environment $\SENV$, whereas in this case
+      the obligation concerns locations
+      in the domain of the constraint environment $\CENV$.
+      %
+      However, the same proof steps apply in both cases, thus discharging
+      this case.
+      \item Case (\refwellformed{sec:well-formedness}{wf:ca}):
+      \begin{align*}
+      \storewfca{\AENV'}{\NENV'}{\MENV}{\STOR'}
+      \end{align*}
+      Obligations \refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc} and
+      \refwellformed{sec:well-formedness-allocation}{wf:impl-write-once} discharge immediately
+      because $\locreg{\loc}{\reg} \not \in \NENV'$.
+      %
+      It remains to discharge the obligation corresponding to
+      \refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc2}.
+      %
+      Because it is the case that
+      \begin{align*}
+      (\reg \mapsto \locreg{\loc}{\reg}) \in \AENV' \wedge
+      (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind_1}{}) \in \MENV \wedge \locreg{\loc}{\reg} \not \in \NENV' \wedge
+    \, \ewitness{\TYP}{\concreteloc{\reg}{\ind_1}{}}{\STOR'}{\concreteloc{\reg}{\ind_2}{}},
+    \end{align*}
+    the obligation amounts to showing that the end witness of the
+    constructor application is the new highest address in the store
+    $\STOR'$, i.e., $\ind_2 > \allocptr{\reg}{\STOR'}$.
+    %
+    There are two cases, based on the number of constructor arguments $n$:
+      \begin{itemize}
+      \item Case $n = 0$:\\
+      We need to appeal to the well formedness of the store, as given by the premise of this lemma,
+      and in particular rule \refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc}.
+      %
+      To use  this rule, we need to first establish
+      $(\reg \mapsto \locreg{\loc}{\reg}) \in A$ and $\locreg{\loc}{\reg} \in \NENV$,
+      which follows immediately by inversion on \tdatacon{}.
+      %
+      It therefore follows that
+      \begin{align*}
+%      \ind_1 = \max \set{0} \cup \set{\indj \; | \; \concreteloc{\reg}{\indj}{} \in \MENV} \wedge \\
+      \ind_1 > \allocptr{\reg}{\STOR}.
+      \end{align*}
+      From this property, and by inspection on $\STOR'$, we discharge
+      this case by establishing that the end witness of the constructor
+      application is the highest address allocated in the new store $\STOR'$, i.e.,
+      \begin{align*}
+      \ind_1+1 = \ind_2 > \allocptr{\reg}{\STOR'}.
+      \end{align*}
+      \item Case $n \geq 1$:\\
+      To discharge this case, we need to show that the end witness of the
+      last constructor argument, i.e., the one at position $n$,
+      is the highest address in the new store $\STOR'$.
+      %
+      This obligation follows from the well formedness of the
+      store $\STOR$ given by the premise of this lemma, and
+      in particular the application of rule
+      \refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc2}
+      to the end witness of the last constructor argument, i.e.,
+      \begin{align*}
+      (\reg \mapsto \overharpoon{\locreg{\loc}{\reg}_n}) \in A \wedge
+    \, (\overharpoon{\locreg{\loc}{\reg}_n} \mapsto \concreteloc{\reg}{\overharpoon{w_n}}{}) \in \MENV \wedge
+    \, \ewitness{\TYP}{\concreteloc{\reg}{\overharpoon{w_n}}{}}{\STOR}{\concreteloc{\reg}{\overharpoon{w_{n+1}}}{}}
+      \end{align*}
+      The first two conjuncts follow from inversion on \tdatacon{}
+      and \tconcreteloc{}, respectively, and the final one from Property~\ref{prf:dc-ew-f2}.
+      %
+      Thus, we have that $\overharpoon{w_{n+1}} > \allocptr{\reg}{\STOR}$.
+      %
+      It follows that $\overharpoon{w_{n+1}} > \allocptr{\reg}{\STOR'}$, because the
+      newly written address in $\STOR'$, namely $i_1$, is such that $i_1 < \overharpoon{w_{n+1}}$.
+      %
+      By defintion of the end witness, we discharge this case by establishing that
+      $\overharpoon{w_{n+1}} = i_2 > \allocptr{\reg}{\STOR'}$.
+      \end{itemize}
+      The final obligation of this case concerns the requirement
+      \refwellformed{sec:well-formedness-allocation}{wf:impl-empty-region}.
+      %
+      Part of this obligation is given by the premise of this lemma, for the original
+      store $\STOR$, and yields in particular that,
+      for each $(\reg' \mapsto \emptyset) \in \AENV$, it
+      is the case that $\reg' \not \in dom(\STOR)$.
+      %
+      The remaining obligation is to show the property holds for the new store
+      $\STOR'$, which discharges immediately because, although $\reg \in \STOR'$,
+      by inversion on \tdatacon{}, it must be that
+      $(\reg \mapsto \emptyset) \not \in \AENV$.
+      \item
+      Case (\refwellformed{sec:well-formedness}{wf:impl1}):
+      \begin{displaymath}
+      dom(\SENV') \cap \NENV' = \emptyset
+      \end{displaymath}
+      From the premise of the lemma, we have that the store is well formed with respect to typing
+      environments $\SENV$ and $\NENV$, and as such, we have that
+      $dom(\SENV) \cap \NENV = \emptyset$.
+      %
+      Therefore, we discharge this case by inspection of typing rule \tdatacon{}, which
+      shows that $N' = N - \set{\loc}$.
+    \end{itemize}
+    \end{itemize}
+  \end{bcase}
+
+  \begin{bcase}
+    \begin{mathpar}
+    \rdcase{}
+    \end{mathpar}
+    \begin{itemize}
+    \item
+    The first of two proof obligations is to show that
+    the result $\EXPR' = \subst{\EXPR}{\overharpoon{\var}}{\concreteloc{\reg}{\overharpoon{w}}{\overharpoon{\locreg{\loc}{\reg}}}}$ of
+    the given step of evaluation is well typed, that is,
+    \begin{displaymath}
+    \emptytenv;\SENV';\CENV;\AENV;\NENV \vdash \AENV; \NENV; \EXPR' : \hTYP,
+    \end{displaymath}
+    %
+    where $\hTYP = \tyatlocreg{\TYP}{\loc}{\reg}$.
+    %
+    To establish the above, we start by obtaining the type
+    for the body of the pattern, then the types of the
+    concrete locations being substituted into the body,
+    and finally use these two results
+    with the substitution lemma to discharge the case.
+    %
+    First, by inversion on the typing rules \tcase{} and \tpat{}, we
+    establish that the body of the pattern, namely $\EXPR$, is well typed, i.e.,
+    \begin{align*}
+    \TENV';\SENV';\CENV;\AENV;\NENV \vdash \AENV;\NENV;\EXPR : \tyatlocreg{\TYP}{\loc}{\reg},
+    \end{align*}
+    where
+    \begin{align*}
+    \TENV' &= \set{\overharpoon{\var_1} \mapsto \overharpoon{\TYP_1} \ensuremath{@} \overharpoon{\locreg{\loc_1}{\reg}}, \ldots, \overharpoon{\var_1} \mapsto \overharpoon{\TYP_n} \ensuremath{@} \overharpoon{\locreg{\loc_n}{\reg}}} \\
+    \SENV' &= \SENV \cup \set{\overharpoon{\locreg{\loc_1}{\reg}}\mapsto\overharpoon{\TYP}_1,\ldots,\overharpoon{\locreg{\loc_n}{\reg}}\mapsto\overharpoon{\TYP}_n}.
+    \end{align*}
+    %
+    Second, we establish that the concrete locations being substituted for the
+    pattern variables $\overharpoon{x}$ are well typed.
+    %
+    The specific obligation is, for each $i \in \set{1, \ldots, n}$, to establish that
+    \begin{align*}
+    \emptyset;\SENV';\CENV;\AENV;\NENV \vdash \AENV;\NENV; \concreteloc{\reg}{\overharpoon{w_i}}{\overharpoon{\locreg{\loc_i}{\reg}}} : \overharpoon{\TYP}_i \ensuremath{@} \overharpoon{\locreg{\loc_i}{\reg}}.
+    \end{align*}
+    %
+    The above holds because, by inversion on \tconcreteloc{}, the obligation is
+    to show that, for each such $i$, $(\locreg{\overharpoon{\loc_i}}{\reg} \mapsto \overharpoon{\TYP_i}) \in \SENV'$,
+    which is immediate by inspection on $\SENV'$ above.
+    %
+    Third, and finally, to establish the typing judgement for $\EXPR'$, we use the Substitution
+    Lemma \ref{lemma:substitution}, which yields
+    %
+    \begin{align*}
+    \emptyset;\SENV';\CENV;\AENV;\NENV \vdash \AENV;\NENV; \subst{\EXPR}{\overharpoon{\var_1}}{\concreteloc{\reg}{\overharpoon{w_1}}{\overharpoon{\locreg{\loc_1}{\reg}}}}
+    \ldots \subst{}{\overharpoon{\var_n}}{\concreteloc{\reg}{\overharpoon{w_1}}{\overharpoon{\locreg{\loc_n}{\reg}}}}: \hTYP,
+    \end{align*}
+    as needed, thereby discharging this obligation.
+    \item The second obligation
+    for this proof case is, given the affected environments, namely
+    $\SENV'$ and $\MENV'$, to establish the well formedness
+    of the resulting store, i.e.,
+    %
+    \begin{displaymath}
+    \storewf{\SENV'}{\CENV}{\AENV}{\NENV}{\MENV'}{\STOR}.
+    \end{displaymath}
+    We omit most of the details of this proof obligation because they
+    discharge straightforwardly.
+    %
+    The only part that requires attention is rule
+    \refwellformed{sec:well-formedness}{wf:map-store-consistency},
+    which is affected by the fresh locations in the location
+    environment $\MENV'$.
+    %
+    This requirement discharges by inspection of \dcase{}, thereby
+    discharging this obligation.
+    \end{itemize}
+  \end{bcase}
+
+  \begin{bcase}
+    \begin{mathpar}
+    \rdletloctag{}
+    \end{mathpar}
+    \begin{itemize}
+    \item
+    The first of two proof obligations is to show that
+    the result $\EXPR$ of
+    the given step of evaluation is well typed, that is,
+    \begin{displaymath}
+    \emptytenv;\SENV;\CENV';\AENV';\NENV' \vdash \AENV''; \NENV''; \EXPR : \hTYP,
+    \end{displaymath}
+    where $\hTYP = \tyatlocreg{\TYP}{\loc}{\reg}$, $\AENV' = \AENV \cup \set{\reg \mapsto \locreg{\loc}{\reg}}$,
+    and $\NENV' = \NENV \cup \set{\locreg{\loc}{\reg}}$.
+    %
+    This proof obligation follows straightforwardly by inversion
+    on \tlltag{}.
+    \item The second obligation for this proof case is to show that
+    \begin{displaymath}
+    \storewf{\SENV}{\CENV'}{\AENV'}{\NENV'}{\MENV'}{\STOR}.
+    \end{displaymath}
+    The individual requirements, labeled
+    \refwellformed{sec:well-formedness}{wf:map-store-consistency} -
+        \refwellformed{sec:well-formedness}{wf:ca},
+        are handled by the following case analysis.
+    \begin{itemize}
+      \item
+      Case (\refwellformed{sec:well-formedness}{wf:map-store-consistency}):
+      for each $(\locreg{\loc'}{\reg} \mapsto \TYP) \in \SENV$, there exists some $\ind_1, \ind_2$ such that
+      \begin{align*}
+      (\locreg{\loc'}{\reg} \mapsto \concreteloc{\reg}{\ind_1}{}) \in \MENV' \wedge \\
+        \ewitness{\TYP}{\concreteloc{\reg}{\ind_1}{}}{\STOR}{\concreteloc{\reg}{\ind_2}{}}
+      \end{align*}
+      %
+      By the well formedness of the store given in the premise of this lemma,
+      the above already holds for the location environment $\MENV$.
+      %
+      The obligation discharges by inspecting the only new location
+      in $\MENV'$, namely $\locreg{\loc}{\reg}$, which
+      is fresh and therefore cannot be in the domain of $\SENV$.
+      \item Case (\refwellformed{sec:well-formedness}{wf:cfc}):
+      \begin{align*}
+      \storewfcfa{\CENV'}{\MENV'}{\STOR}
+      \end{align*}
+      Of the requirements for this judgement, the only one that is
+      not satisfied immediately by the well formedness of the store
+      given in the premise of the lemma is requirement
+      \refwellformed{sec:well-formedness-constructors}{wfconstr:constraint-tag}
+      %
+      The specific requirement is to establish that
+      \begin{align*}
+      (\locreg{\loc'}{\reg} \mapsto \concreteloc{\reg}{\ind}{})  \in \MENV' \wedge \\
+      (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind + 1}{})  \in \MENV',
+      \end{align*}
+      which follows immediately by inversion on \dletloctag{}.
+      \item Case (\refwellformed{sec:well-formedness}{wf:ca}):
+      \begin{align*}
+      \storewfca{\AENV'}{\NENV'}{\MENV'}{\STOR}
+      \end{align*}
+        \begin{itemize}
+        \item Case (\refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc}):
+        \begin{align*}
+                  (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind+1}{}) \in \MENV' \wedge
+%          \ind+1 = \max \set{0} \cup \set{\indj \; | \; \concreteloc{\reg}{\indj}{} \in \MENV'} \wedge \\
+          \ind+1 > \allocptr{\reg}{\STOR}
+        \end{align*}
+        The first conjunct follows immediately from inversion on \dletloctag{}.
+        %
+        To establish the second, however, we first need to establish
+        that the address corresponding to location $\locreg{\loc'}{\reg}$ is the highest index in
+        the store $\STOR$.
+        %
+        To do so, we need to appeal to the well formedness of the store given by the
+        premise of this lemma.
+        %
+        In particular, we need to use the same requirement we are trying to prove,
+        namely \refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc}, but in this case,
+        instantiating for $\locreg{\loc'}{\reg}$ in the original location environment $\MENV$.
+        %
+        By inversion on \tlltag{}, we have that $\AENV(\reg) = \locreg{\loc'}{\reg}$ and $\locreg{\loc'}{\reg} \in \NENV$,
+        and as a consequence of \refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc},
+        \begin{align*}
+                  (\locreg{\loc'}{\reg} \mapsto \concreteloc{\reg}{\ind}{}) \in \MENV \wedge
+%          \ind = \max \set{0} \cup \set{\indj \; | \; \concreteloc{\reg}{\indj}{} \in \MENV} \wedge \\
+          \ind > \allocptr{\reg}{\STOR}.
+        \end{align*}
+        Using the second conjunct above, this case discharges immediately.
+        \item Case (\refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc2}):
+        This obligation discharges immediately because, by inversion on \tlltag{}, $\locreg{\loc}{\reg} \in \NENV'$.
+        \item Case (\refwellformed{sec:well-formedness-allocation}{wf:impl-write-once}):
+        The proof obligation is to establish that, for any constructor tag $\DC$,
+        \begin{align*}
+         ((\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind+1}{}) \in \MENV' \wedge \\
+          (\reg \mapsto (\ind+1 \mapsto \DC)) \not \in \STOR)
+        \end{align*}
+        The first conjunct discharges by inversion on \dletloctag{},
+        and the second as a consequence of having already
+        established just above that $\ind+1 > \allocptr{\reg}{\STOR}$.
+        \item Case (\refwellformed{sec:well-formedness-allocation}{wf:impl-empty-region}):
+        The proof obligation is to establish that, for each
+        $(\reg \mapsto \emptyset) \in \AENV'$, it is the case that
+        $\reg \not \in dom(\STOR)$.
+        %
+        This case discharges because, from the premise of the
+        lemma, this property holds for the original environment
+        $\AENV$ and store $\STOR$, and, by inversion on \tlltag{},
+        continues to hold for $\AENV'$ and $\STOR'$.
+      \end{itemize}
+      \item
+      Case (\refwellformed{sec:well-formedness}{wf:impl1}):
+      \begin{displaymath}
+      dom(\SENV) \cap \NENV' = \emptyset
+      \end{displaymath}
+      Because it is a bound location, $\loc \not \in dom(\SENV)$, and by inversion on \tlltag{},
+      $\loc \in \NENV'$, which discharges the obligation.
+      \end{itemize}
+    \end{itemize}
+  \end{bcase}
+
+  \begin{bcase}
+    \begin{mathpar}
+    \rdletlocafter{}
+    \end{mathpar}
+    \begin{itemize}
+    \item
+    The first of two proof obligations is to show that
+    the result $\EXPR'$ of
+    the given step of evaluation is well typed, that is,
+    \begin{displaymath}
+    \emptytenv;\SENV;\CENV';\AENV';\NENV' \vdash \AENV''; \NENV''; \EXPR' : \hTYP,
+    \end{displaymath}
+    where $\hTYP = \tyatlocreg{\TYP}{\loc'}{\reg'}$.
+    %
+    This proof obligation follows straightforwardly by inversion
+    on \tllafter{}.
+    \item The second obligation for this proof case is to show that
+    \begin{displaymath}
+    \storewf{\SENV}{\CENV'}{\AENV'}{\NENV'}{\MENV'}{\STOR}.
+    \end{displaymath}
+    The individual requirements, labeled
+    \refwellformed{sec:well-formedness}{wf:map-store-consistency} -
+        \refwellformed{sec:well-formedness}{wf:ca},
+        are handled by the following case analysis.
+    \begin{itemize}
+      \item
+      Case (\refwellformed{sec:well-formedness}{wf:map-store-consistency}):
+      for each $(\locreg{\loc'}{\reg} \mapsto \TYP) \in \SENV$, there exists some $\ind_1, \ind_2$ such that
+      \begin{align*}
+      (\locreg{\loc'}{\reg} \mapsto \concreteloc{\reg}{\ind_1}{}) \in \MENV' \wedge \\
+        \ewitness{\TYP}{\concreteloc{\reg}{\ind_1}{}}{\STOR}{\concreteloc{\reg}{\ind_2}{}}
+      \end{align*}
+      %
+      By the well formedness of the store given in the premise of this lemma,
+      the above already holds for the location environment $\MENV$.
+      %
+      The obligation discharges by inspecting the only new location
+      in $\MENV'$, namely $\locreg{\loc}{\reg}$, which
+      is fresh and therefore cannot be in the domain of $\SENV$.
+      \item Case (\refwellformed{sec:well-formedness}{wf:cfc}):
+      \begin{align*}
+      \storewfcfa{\CENV'}{\MENV'}{\STOR}
+      \end{align*}
+      Of the requirements for this judgement, the only one that is
+      not satisfied immediately by the well formedness of the store
+      given in the premise of the lemma is requirement
+      \refwellformed{sec:well-formedness-constructors}{wfconstr:constraint-after}
+      %
+      The specific requirement is to establish that
+      \begin{align*}
+       (\locreg{\loc_1}{\reg} \mapsto \concreteloc{\reg}{\ind}{}) \in \MENV' \wedge \\
+       \ewitness{\TYP}{\concreteloc{\reg}{\ind}{}}{\STOR}{\concreteloc{\reg}{\indj}{}} \wedge \\
+       (\loc \mapsto \concreteloc{\reg}{\indj}{}) \in \MENV'
+      \end{align*}
+      which follows immediately by inversion on \dletlocafter{}.
+      \item Case (\refwellformed{sec:well-formedness}{wf:ca}):
+      \begin{align*}
+      \storewfca{\AENV'}{\NENV'}{\MENV'}{\STOR}
+      \end{align*}
+        \begin{itemize}
+        \item Case (\refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc}):
+        \begin{align*}
+                  (\loc \mapsto \concreteloc{\reg}{\indj}{}) \in \MENV' \wedge
+%          \indj = \max \set{0} \cup \set{\indj' \; | \; \concreteloc{\reg}{\indj'}{} \in \MENV'} \wedge \\
+          \indj > \allocptr{\reg}{\STOR}
+        \end{align*}
+        The first conjunct follows immediately from inversion on \dletlocafter{}.
+        %
+        To establish the second, however, we first need to establish
+        that the end witness $\indj$ of location $\locreg{\loc_1}{\reg}$ is the maximum index in the
+        store $\STOR$.
+        %
+        To do so, we need to appeal to the well formedness of the store given by the
+        premise of this lemma.
+        %
+        In particular, we need to use the requirement \refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc2},
+        instantiating for $\locreg{\loc_1}{\reg}$ in the original location environment $\MENV$.
+        %
+        By inversion on \tllafter{}, we have that $\AENV(\reg) = \locreg{\loc_1}{\reg}$, $\locreg{\loc_1}{\reg} \not \in \NENV$,
+        and $\ewitness{\TYP}{\concreteloc{\reg}{\ind}{}}{\STOR}{\concreteloc{\reg}{\indj}{}}$.
+        %
+        Thus, as a consequence of \refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc2},
+        \begin{align*}
+%                  (\loc' \mapsto \concreteloc{\reg}{\ind}{}) \in \MENV \wedge
+%          \ind = \max \set{0} \cup \set{\indj \; | \; \concreteloc{\reg}{\indj}{} \in \MENV} \wedge \\
+          \indj > \allocptr{\reg}{\STOR}.
+        \end{align*}
+        Using the second and third conjuncts above, this case discharges immediately.
+        \item Case (\refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc2}):
+        This obligation discharges immediately because, by inversion on \tllafter{}, $\loc \in \NENV'$.
+        \item Case (\refwellformed{sec:well-formedness-allocation}{wf:impl-write-once}):
+        The proof obligation is to establish that, for any constructor tag $\DC$,
+        \begin{align*}
+         ((\loc \mapsto \concreteloc{\reg}{\indj}{}) \in \MENV' \wedge \\
+          (\reg \mapsto (\indj \mapsto \DC)) \not \in \STOR)
+        \end{align*}
+        The first conjunct discharges by inversion on \dletlocafter{},
+        and the second as a consequence of having already
+        established just above that $\indj > \allocptr{\reg}{\STOR}$.
+        \item Case (\refwellformed{sec:well-formedness-allocation}{wf:impl-empty-region}):
+        This case discharges straightforwardly, in a similar fashion
+        to the previous case, for \dletloctag{}.
+        \end{itemize}
+      \item
+      Case (\refwellformed{sec:well-formedness}{wf:impl1}):
+      \begin{displaymath}
+      dom(\SENV) \cap \NENV' = \emptyset
+      \end{displaymath}
+      Because it is a bound location, $\loc \not \in dom(\SENV)$, and by inversion on \tllafter{}
+      $\loc \in \NENV'$, which discharges this obligation.
+      \end{itemize}
+    \end{itemize}
+  \end{bcase}
+
+  \begin{bcase}
+    \begin{mathpar}
+    \rdletlocstart{}
+    \end{mathpar}
+    \begin{itemize}
+    \item
+    The first of two proof obligations is to show that
+    the result $\EXPR'$ of
+    the given step of evaluation is well typed, that is,
+    \begin{displaymath}
+    \emptytenv;\SENV;\CENV';\AENV';\NENV' \vdash \AENV''; \NENV''; \EXPR' : \hTYP,
+    \end{displaymath}
+    where $\hTYP = \tyatlocreg{\TYP}{\loc'}{\reg'}$.
+    %
+    This obligation follows straightforwardly by inversion
+    on \tllstart{}.
+    \item The second obligation for this proof case is to show that
+    \begin{displaymath}
+    \storewf{\SENV}{\CENV'}{\AENV'}{\NENV'}{\MENV'}{\STOR}.
+    \end{displaymath}
+    The individual requirements, labeled
+    \refwellformed{sec:well-formedness}{wf:map-store-consistency} -
+        \refwellformed{sec:well-formedness}{wf:ca},
+        are handled by the following case analysis.
+    \begin{itemize}
+      \item
+      Case (\refwellformed{sec:well-formedness}{wf:map-store-consistency}):
+      for each $(\loc' \mapsto \TYP) \in \SENV$, there exists some $\ind_1, \ind_2$ such that
+      \begin{align*}
+      (\loc' \mapsto \concreteloc{\reg}{\ind_1}{}) \in \MENV' \wedge \\
+        \ewitness{\TYP}{\concreteloc{\reg}{\ind_1}{}}{\STOR}{\concreteloc{\reg}{\ind_2}{}}
+      \end{align*}
+      %
+      By the well formedness of the store given in the premise of this lemma,
+      the above already holds for the location environment $\MENV$.
+      %
+      The obligation discharges by inspecting the only new location
+      in $\MENV'$, namely $\locreg{\loc}{\reg}$, which
+      is fresh and therefore cannot be in the domain of $\SENV$.
+      \item Case (\refwellformed{sec:well-formedness}{wf:cfc}):
+      \begin{align*}
+      \storewfcfa{\CENV'}{\MENV'}{\STOR}
+      \end{align*}
+      Of the requirements for this judgement, the only one that is
+      not satisfied immediately by the well formedness of the store
+      given in the premise of the lemma is requirement
+      \refwellformed{sec:well-formedness-constructors}{wfconstr:constraint-start}.
+      %
+      The specific requirement is to establish that
+      \begin{align*}
+      (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{0}{}) \in \MENV',
+      \end{align*}
+      which follows immediately by inversion on \dletlocstart{}.
+      \item Case (\refwellformed{sec:well-formedness}{wf:ca}):
+      \begin{align*}
+      \storewfca{\AENV'}{\NENV'}{\MENV'}{\STOR}
+      \end{align*}
+        \begin{itemize}
+        \item Case (\refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc}):
+        \begin{align*}
+                  (\loc \mapsto \concreteloc{\reg}{0}{}) \in \MENV' \wedge
+          0 > \allocptr{\reg}{\STOR}
+        \end{align*}
+        The first conjunct follows immediately from inversion on \dletlocstart{}.
+        %
+        To establish the second conjunct above, it suffices establish
+        that $\reg \not \in dom(\STOR)$,
+        because, as such, $\allocptr{\reg}{\STOR} = -1$, by the definition of $MaxIdx$.
+        %
+        This property follows from the well formedness of the
+        store, in particular, from rule
+        \refwellformed{sec:well-formedness-allocation}{wf:impl-empty-region}.
+        %
+        The rule guarantees that, if $(\reg \mapsto \emptyset) \in \AENV$, then
+        $\reg \not \in dom(\STOR)$, as needed.
+        %
+        By inversion on \tllstart{}, we establish this precondition, thereby
+        discharging the case.
+        \item Case (\refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc2}):
+        This obligation discharges immediately because, by inversion on \tllstart{}, $\loc \in \NENV'$.
+        \item Case (\refwellformed{sec:well-formedness-allocation}{wf:impl-write-once}):
+        The proof obligation is to establish that, for any constructor tag $\DC$,
+        \begin{align*}
+         ((\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{0}{}) \in \MENV' \wedge \\
+          (\reg \mapsto (0 \mapsto \DC)) \not \in \STOR)
+        \end{align*}
+        The first conjunct discharges by inversion on \dletlocstart{},
+        and the second as a consequence of having already
+        established just above that $0 > \allocptr{\reg}{\STOR}$.
+        \item Case (\refwellformed{sec:well-formedness-allocation}{wf:impl-empty-region}):
+        The obligation for this case is to establish that
+        for each $(\reg \mapsto \emptyset) \in \AENV' = \AENV \cup \set{\reg \mapsto \locreg{\loc}{\reg}}$, it
+        is the case that $\reg \not \in dom(\STOR)$.
+        %
+        The part of this obligation pertaining to environment $\AENV$
+        is given by the premise of this lemma, and thus it only remains
+        to establish that the property holds for the rest, namely
+        $\set{\reg \mapsto \locreg{\loc}{\reg}}$.
+        %
+        This part discharges trivially, because $(\reg \mapsto \emptyset) \not \in \AENV'$,
+        thereby discharging this case.
+        \end{itemize}
+      \item
+      Case (\refwellformed{sec:well-formedness}{wf:impl1}):
+      \begin{displaymath}
+      dom(\SENV) \cap \NENV' = \emptyset
+      \end{displaymath}
+      This case discharges straightforwardly.
+      \end{itemize}
+    \end{itemize}
+  \end{bcase}
+
+  \begin{bcase}
+    \begin{mathpar}
+    \rdletregion{}
+    \end{mathpar}
+    \begin{itemize}
+    \item
+    The first of two proof obligations is to show that
+    the result $\EXPR'$ of
+    the given step of evaluation is well typed, that is,
+    \begin{displaymath}
+    \emptytenv;\SENV;\CENV';\AENV';\NENV' \vdash \AENV''; \NENV''; \EXPR' : \hTYP,
+    \end{displaymath}
+    where $\hTYP = \tyatlocreg{\TYP}{\loc'}{\reg'}$.
+    %
+    This proof obligation follows straightforwardly by inversion
+    on \tlregion{}.
+    \item The second obligation for this proof case is to show that
+    \begin{displaymath}
+    \storewf{\SENV}{\CENV}{\AENV'}{\NENV}{\MENV}{\STOR}.
+    \end{displaymath}
+    The individual requirements, labeled
+    \refwellformed{sec:well-formedness}{wf:map-store-consistency} -
+        \refwellformed{sec:well-formedness}{wf:ca},
+        are handled by the following case analysis.
+    \begin{itemize}
+      \item
+      Case (\refwellformed{sec:well-formedness}{wf:map-store-consistency}):
+      for each $(\locreg{\loc'}{\reg} \mapsto \TYP) \in \SENV$, there exists some $\ind_1, \ind_2$ such that
+      \begin{align*}
+      (\locreg{\loc'}{\reg} \mapsto \concreteloc{\reg}{\ind_1}{}) \in \MENV \wedge \\
+        \ewitness{\TYP}{\concreteloc{\reg}{\ind_1}{}}{\STOR}{\concreteloc{\reg}{\ind_2}{}}
+      \end{align*}
+      %
+      This case discharges immediately by inversion of \tlregion{} and \dletregion{},
+      because none of the relevant environments are affected by the transition.
+      \item Case (\refwellformed{sec:well-formedness}{wf:cfc}):
+      \begin{align*}
+      \storewfcfa{\CENV}{\MENV}{\STOR}
+      \end{align*}
+      The case discharges in a fashion similar to the previous one.
+      \item Case (\refwellformed{sec:well-formedness}{wf:ca}):
+      \begin{align*}
+      \storewfca{\AENV'}{\NENV}{\MENV}{\STOR}
+      \end{align*}
+      Of the requirements in this judgement, the only one that is affected by the
+      new environment $\AENV'$ is requirement
+      \refwellformed{sec:well-formedness-allocation}{wf:impl-empty-region}.
+      %
+      The specific obligation is to establish that,
+      for each $(\reg \mapsto \emptyset) \in \AENV'$, it
+      is the case that $\reg \not \in dom(\STOR)$.
+      %
+      By inversion on \tlregion{},
+      $\AENV' = \AENV \cup \set{\reg \mapsto \emptyset}$, and therefore,
+      the first part of the obligation, that is, for $\AENV$, is already
+      given by the premise of this lemma.
+      %
+      As such, it only remains to establish that $\reg \not \in dom(\STOR)$,
+      which follows from $\reg$ being a fresh region, thereby ruling out
+      it being in the store, and thus discharging this case.
+      \item
+      Case (\refwellformed{sec:well-formedness}{wf:impl1}):
+      \begin{displaymath}
+      dom(\SENV) \cap \NENV' = \emptyset
+      \end{displaymath}
+      This case discharges straightforwardly.
+      \end{itemize}
+    \end{itemize}
+  \end{bcase}
+
+  \begin{bcase}
+    \begin{mathpar}
+    \rdletval{}
+    \end{mathpar}
+    \begin{itemize}
+    \item
+    The first of two proof obligations is to show that
+    the result $\subst{\EXPR_2}{\var}{\VAL_1}$ of
+    the given step of evaluation is well typed, that is,
+    \begin{displaymath}
+    \emptytenv;\SENV';\CENV;\AENV;\NENV \vdash \AENV; \NENV; \subst{\EXPR_2}{\var}{\VAL_1} : \tyatlocreg{\TYP_2}{\loc_2}{\reg_2}.
+    \end{displaymath}
+    By inversion on \tlet{}, we obtain the type of the value being bound
+    \begin{align*}
+    \emptyset;\SENV;\CENV;\AENV;\NENV \vdash \AENV;\NENV;\VAL_1 : \tyatlocreg{\TYP_1}{\loc_1}{\reg_1},
+    \end{align*}
+    and we obtain the type of the body
+    \begin{align*}
+    \TENV';\SENV';\CENV;\AENV;\NENV \vdash \AENV;\NENV;\EXPR_2 : \tyatlocreg{\TYP_2}{\loc_2}{\reg_2}
+    \end{align*}
+    where
+    \begin{align*}
+    \TENV' &= \set{\var \mapsto \tyatlocreg{\TYP_1}{\loc_1}{\reg_1}} \\
+    \SENV' &= \SENV \cup \set{\locreg{\loc_1}{\reg_1} \mapsto \TYP_1}.
+    \end{align*}
+    As such we can apply the Substitution
+    Lemma \ref{lemma:substitution}, as follows
+    \begin{displaymath}
+    \emptytenv;\SENV';\CENV;\AENV;\NENV \vdash \AENV; \NENV; \subst{\EXPR_2}{\var}{\VAL_1} \subst{}{\locreg{\loc_1}{\reg_1}}{\locreg{\loc_1}{\reg_1}} : \tyatlocreg{\TYP_2}{\loc_2}{\reg_2},
+    \end{displaymath}
+    which discharges our obligation, given that the substitution of the
+    bound location $\locreg{\loc_1}{\reg_1}$ is the identity substitution.
+    \item Given the instantiations of $\SENV'$ and $\MENV'$
+    used by the previous step, the second obligation
+    for this proof case is to show that
+    \begin{displaymath}
+    \storewf{\SENV'}{\CENV}{\AENV}{\NENV}{\MENV'}{\STOR}.
+    \end{displaymath}
+    The individual requirements, labeled
+    \refwellformed{sec:well-formedness}{wf:map-store-consistency} -
+        \refwellformed{sec:well-formedness}{wf:ca},
+        are handled by the following case analysis.
+    \begin{itemize}
+      \item
+      Case (\refwellformed{sec:well-formedness}{wf:map-store-consistency}):
+      for each $(\locreg{\loc'}{\reg} \mapsto \TYP) \in \SENV' = \SENV \cup \set{\locreg{\loc_1}{\reg_1} \mapsto \TYP_1}$, there exists some $\ind_1, \ind_2$ such that
+      \begin{align*}
+      (\locreg{\loc'}{\reg} \mapsto \concreteloc{\reg}{\ind_1}{}) \in \MENV \wedge \\
+        \ewitness{\TYP}{\concreteloc{\reg}{\ind_1}{}}{\STOR}{\concreteloc{\reg}{\ind_2}{}}
+      \end{align*}
+      %
+      This obligation amounts to showing the above holds for the bound location
+      $\locreg{\loc_1}{\reg_1}$, because the well formedness of the
+      store given by the premise of this lemma guarantees the property
+      holds for locations bound in $\SENV$.
+      %
+      The value $\VAL_1$ bound at location $\locreg{\loc_1}{\reg_1}$ is
+      a value and is well typed, and as such, there are only two typing
+      rules that could apply, namely \tvar{} and \tconcreteloc{}.
+      %
+      By inversion on these rules, we establish that
+      \begin{align*}
+      (\locreg{\loc_1}{\reg_1} \mapsto \TYP_1) \in \SENV.
+      \end{align*}
+      %
+      Therefore, we can discharge this obligation by application of well formedness of the
+      store, in particular, the rule
+      \refwellformed{sec:well-formedness}{wf:map-store-consistency} we
+      are currently considering.
+      %
+      Concretely, we discharge this obligation by instantiating that rule to
+      %
+      \begin{align*}
+      (\locreg{\loc_1}{\reg_1} \mapsto \concreteloc{\reg_1}{\ind_1}{}) \in \MENV \wedge \\
+        \ewitness{\TYP_1}{\concreteloc{\reg_1}{\ind_1}{}}{\STOR}{\concreteloc{\reg_1}{\ind_2}{}}.
+      \end{align*}
+      \item Case (\refwellformed{sec:well-formedness}{wf:cfc}):
+      \begin{align*}
+      \storewfcfa{\CENV}{\MENV}{\STOR}
+      \end{align*}
+      This case discharges immediately because the relevant environments
+      are affected by neither the of the relevant typing nor the dynamic-semantic judgement.
+      \item Case (\refwellformed{sec:well-formedness}{wf:ca}):
+      \begin{align*}
+      \storewfca{\AENV}{\NENV}{\MENV}{\STOR}
+      \end{align*}
+      This case discharges immediately because the relevant environments
+      are affected by neither the of the relevant typing nor the dynamic-semantic judgement.
+      \item
+      Case (\refwellformed{sec:well-formedness}{wf:impl1}):
+      \begin{displaymath}
+      dom(\SENV') \cap \NENV = \emptyset
+      \end{displaymath}
+      This case discharges straightforwardly.
+      \end{itemize}
+    \end{itemize}
+  \end{bcase}
+
+  \begin{bcase}
+    \begin{mathpar}
+    \rdletexp{}
+    \end{mathpar}
+    \begin{itemize}
+    \item
+    The first of two proof obligations is to show that
+    the result $\letpack{\var : \hTYP}{\EXPR'_1}{\EXPR_2}$ of
+    the given step of evaluation is well typed, that is,
+    \begin{displaymath}
+    \emptytenv;\SENV;\CENV;\AENV';\NENV' \vdash \AENV''; \NENV''; \letpack{\var : \hTYP}{\EXPR'_1}{\EXPR_2} : \tyatlocreg{\TYP_2}{\loc_2}{\reg_2},
+    \end{displaymath}
+    %
+    The induction hypothesis is
+    \begin{displaymath}
+      \begin{aligned}
+        \text{If} \;\; & \emptytenv;\SENV;\CENV;\AENV;\NENV \vdash \AENV';\NENV';\EXPR_1 : \tyatlocreg{\TYP_1}{\loc_1}{\reg_1} \\
+        \text{and} \;\; & \storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}\\
+        \text{and} \;\; & \STOR;\MENV;\EXPR_1 \stepsto \STOR';\MENV';\EXPR_1' \\
+        \text{then for some} \;\; & \SENV' \supseteq \SENV, \CENV' \supseteq \CENV ,\\
+        & \emptytenv;\SENV';\CENV';\AENV';\NENV' \vdash \AENV'';\NENV'';\EXPR_1' : \tyatlocreg{\TYP_1}{\loc_1}{\reg_1} \\
+        \text{and} \;\; & \storewf{\SENV'}{\CENV'}{\AENV'}{\NENV'}{\MENV'}{\STOR'}.
+      \end{aligned}
+    \end{displaymath}
+    %
+    By inversion on \tlet{}, we establish that
+    \begin{align*}
+    \emptytenv;\SENV;\CENV;\AENV;\NENV \vdash \AENV';\NENV';\EXPR_1 : \tyatlocreg{\TYP_1}{\loc_1}{\reg_1},
+    \end{align*}
+    and, by the premise of this lemma, we establish that
+    \begin{align*}
+    \storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}
+    \end{align*}
+    and by inversion on \dletexp{} we establish that
+    \begin{align*}
+    \STOR;\MENV;\EXPR_1 \stepsto \STOR';\MENV';\EXPR_1'.
+    \end{align*}
+    %
+    Now, we can apply the above to the induction hypothesis to establish
+        \begin{displaymath}
+      \begin{aligned}
+        \text{For some} \;\; & \SENV' \supseteq \SENV, \CENV' \supseteq \CENV ,\\
+        & \emptytenv;\SENV';\CENV';\AENV';\NENV' \vdash \AENV'';\NENV'';\EXPR_1' : \tyatlocreg{\TYP_1}{\loc_1}{\reg_1} \\
+        \text{and} \;\; & \storewf{\SENV'}{\CENV'}{\AENV'}{\NENV'}{\MENV'}{\STOR'}.
+      \end{aligned}
+    \end{displaymath}
+    %
+    By inversion on \tlet{}, we also have that
+    \begin{align*}
+    \TENV';\SENV';\CENV;\AENV';\NENV' \vdash \AENV'';\NENV'';\EXPR_2 : \tyatlocreg{\TYP_2}{\loc_2}{\reg_2},
+    \end{align*}
+    where
+    \begin{align*}
+    \TENV' &= \set{\var \mapsto \tyatlocreg{\TYP_1}{\loc_1}{\reg_1}} \\
+    \SENV' &= \set{\locreg{\loc_1}{\reg_1} \mapsto \TYP_1}.
+    \end{align*}
+    %
+    By inspection on \tlet{} and the previous two typing judgements, that is, for $\EXPR_1'$
+    and $\EXPR_2$, we discharge this case.
+    \item The second obligation
+    \begin{displaymath}
+    \storewf{\SENV'}{\CENV'}{\AENV'}{\NENV'}{\MENV'}{\STOR'}
+    \end{displaymath}
+    discharges immediately from the result of the induction hypothesis, which is
+    established by the above.
+    \end{itemize}
+  \end{bcase}
+
+  \begin{bcase}
+    \begin{mathpar}
+    \rdapp{}
+    \end{mathpar}
+    \begin{itemize}
+    \item
+    The first of two proof obligations is to show that
+    the result $\EXPR' = \subst{\EXPR}{\overharpoon{\var}}{\overharpoon{\VAL}} \subst{}{\overharpoon{\locreg{\loc'}{\reg'}}}{\overharpoon{\locreg{\loc}{\reg}}}$ of
+    the given step of evaluation is well typed, that is,
+    \begin{displaymath}
+    \emptytenv;\SENV';\CENV;\AENV;\NENV' \vdash \AENV'; \NENV''; \subst{\EXPR}{\overharpoon{\var}}{\overharpoon{\VAL}} \subst{}{\overharpoon{\locreg{\loc'}{\reg'}}}{\overharpoon{\locreg{\loc}{\reg}}} : \hTYP,
+    \end{displaymath}
+    where $\hTYP = \tyatlocreg{\TYP}{\loc}{\reg}$.
+    %
+    To this end, we first establish typing judgements for the body of the
+    callee and then the arguments of the function, and finally
+    discharge the first obligation by combining the two results using
+    the substitution lemma.
+    By inversion on \tfunctiondef{}, the type judgement
+    \begin{align*}
+    \TENV;\SENV'';\CENV;\AENV;\NENV \vdash \AENV;\NENV';
+    \EXPR : \tyatlocreg{\TYP}{\loc}{\reg},
+    \end{align*}
+    holds for body of the callee $\EXPR$,
+    with constrants
+    for any caller, such that $\locreg{\loc}{\reg} \in \NENV$, $\locreg{\loc}{\reg} \not \in \NENV'$ and $\AENV(\reg) = \locreg{\loc}{\reg}$, where
+    \begin{align*}
+    \TENV & = \set{\overharpoon{\var_1} \mapsto \overharpoon{{\tyatlocreg{\TYP_1}{\loc'_1}{\reg'}}}, \; \ldots \; , \overharpoon{\var_n} \mapsto \overharpoon{{\tyatlocreg{\TYP_n}{\loc'_n}{\reg'}}}}\\
+    \SENV'' & = \set{\overharpoon{\locreg{\loc'_1}{\reg'}} \mapsto \overharpoon{\TYP_1}, \; \ldots \; , \overharpoon{\locreg{\loc'_n}{\reg'}} \mapsto \overharpoon{\TYP_n}}.
+    \end{align*}
+    Regarding the arguments to the call, we obtain by inversion on \tapp{} that
+    \begin{align*}
+    \emptyset;\SENV;\CENV;\AENV;\NENV \vdash \AENV;\NENV;\overharpoon{\VAL_i} : \overharpoon{\tyatlocreg{\TYP_i}{\loc_i}{\reg}}
+    \end{align*}
+    for $\ind \in \set{1 \ldots n}$.
+    Furthermore, by inversion on \tapp{}, we obtain that $\locreg{\loc}{\reg} \in \NENV$,
+    $\locreg{\loc}{\reg} \not \in \NENV'$, and $\AENV(\reg) = \locreg{\loc}{\reg}$,
+    which altogether satisfy the requirements of \tfunctiondef{}.
+    Now, by application of the Substitution Lemma,
+    we have that
+    \begin{align*}
+    \emptytenv;\SENV;\CENV;\AENV;\NENV' \vdash \AENV; \NENV'; \subst{\EXPR}{\overharpoon{\var_1}}{\overharpoon{\VAL_1}} \subst{}{\overharpoon{\locreg{\loc'_1}{\reg'}}}{\overharpoon{\locreg{\loc_1}{\reg}}} \ldots \subst{}{\overharpoon{\var_n}}{\overharpoon{\VAL_n}} \subst{}{\overharpoon{\locreg{\loc'_n}{\reg'}}}{\overharpoon{\locreg{\loc_n}{\reg}}} : \tyatlocreg{\TYP}{\loc}{\reg}.
+    \end{align*}
+    \item Given the new environment $\NENV'$
+    used by the previous step, the second obligation
+    for this proof case is to show that
+    \begin{displaymath}
+    \storewf{\SENV}{\CENV}{\AENV}{\NENV'}{\MENV}{\STOR}.
+    \end{displaymath}
+    The individual requirements, labeled
+    \refwellformed{sec:well-formedness}{wf:map-store-consistency} -
+        \refwellformed{sec:well-formedness}{wf:ca},
+        are handled by the following case analysis.
+    \begin{itemize}
+      \item
+      Case (\refwellformed{sec:well-formedness}{wf:map-store-consistency}):
+      for each $(\locreg{\loc'}{\reg} \mapsto \TYP) \in \SENV$, there exists some $\ind_1, \ind_2$ such that
+      \begin{align}
+      (\locreg{\loc'}{\reg} \mapsto \concreteloc{\reg}{\ind_1}{}) \in \MENV \wedge \\
+        \ewitness{\TYP}{\concreteloc{\reg}{\ind_1}{}}{\STOR'}{\concreteloc{\reg}{\ind_2}{}}
+      \end{align}
+      %
+      This case discharges immediately from the well formedness of the store
+      given by the premise of this lemma.
+      \item Case (\refwellformed{sec:well-formedness}{wf:cfc}):
+      \begin{align*}
+      \storewfcfa{\CENV}{\MENV}{\STOR}
+      \end{align*}
+      This case discharges immediately from the well formedness of the store
+      given by the premise of this lemma.
+      \item Case (\refwellformed{sec:well-formedness}{wf:ca}):
+      \begin{align*}
+      \storewfca{\AENV}{\NENV'}{\MENV}{\STOR}
+      \end{align*}
+      Of the requirements pertaining to this judgement, the only one potentially
+      affected by the new environment $\NENV'$ is requirement
+      \refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc2}.
+      %
+      The specific obligation therein is to establish that
+      \begin{align*}
+      ((\reg \mapsto \locreg{\loc}{\reg}) \in \AENV \wedge
+    \, (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind_s}{}) \in \MENV \wedge \locreg{\loc}{\reg} \not \in \NENV' \wedge
+    \, \ewitness{\TYP}{\concreteloc{\reg}{\ind_s}{}}{\STOR}{\concreteloc{\reg}{\ind_e}{}}) \Rightarrow \\
+          \ind_e > \allocptr{\reg}{\STOR}.
+          \end{align*}
+      %
+      The reason the change to environment $\NENV'$ might affect
+      the above is because, if all the conjuncts above hold, then
+      it remains to establish that $\ind_e > \allocptr{\reg}{\STOR}$
+      holds.
+      %
+      However, it turns out that the fourth conjunct above does not
+      hold, i.e., there is no such end witness in the store $\STOR$,
+      thus relieving the obligation to establish $\ind_e > \allocptr{\reg}{\STOR}$.
+      %
+      The reason the end witness does not exist is yielded by
+      the well formedness of the store given by the premise of this
+      lemma, in particular requirement
+      \refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc}.
+      %
+      That is, by inversion on \tapp{}, it is the case that
+      \begin{align*}
+      (\reg \mapsto \locreg{\loc}{\reg}) \in \AENV \wedge \locreg{\loc}{\reg} \in \NENV.
+      \end{align*}
+      %
+      Therefore, requirement \refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc}
+      implies that
+      \begin{align*}
+      \ind_s > \allocptr{\reg}{\STOR}.
+      \end{align*}
+      %
+      As such, given that the store $\STOR$ remains unchanged
+      and the above, it is straightforward to show that the end witness
+      starting at $\ind_s$ cannot exist, thereby discharging this case.
+      \end{itemize}
+      \item
+      Case (\refwellformed{sec:well-formedness}{wf:impl1}):
+      \begin{displaymath}
+      dom(\SENV) \cap \NENV' = \emptyset
+      \end{displaymath}
+      This case discharges because,
+      from the well formedness of the store given by the
+      premise of this lemma, $dom(\SENV) \cap \NENV = \emptyset$,
+      and because $\NENV' = \NENV - \set{\locreg{\loc}{\reg}}$.
+    \end{itemize}
+  \end{bcase}
+
+$\blacksquare$
+
+\end{nproof}
+
+%% \subsection{Type Safety}
+
+The type safety theorem for \ourcalc{} was stated in~\ref{theorem:type-safety} and is restated here.
+
+\begin{theorem}[Type safety]
+  %% \label{theorem:type-safety}
+\begin{displaymath}
+  \begin{aligned}
+  \text{If} \;\; & (\emptyset;\SENV;\CENV;\AENV;\NENV \vdash \AENV';\NENV';\EXPR : \hTYP) \wedge
+                   (\storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}) \\
+  \text{and} \;\; & \STOR;\MENV;\EXPR \stepsto^n \STOR';\MENV';\EXPR' \\
+  \text{then} \;\; & (\EXPR' \; \mathit{value}) \vee
+                     (\exists \STOR'', \MENV'', \EXPR'' . \; \STOR';\MENV';\EXPR' \stepsto \STOR'';\MENV'';\EXPR'')
+  \end{aligned}
+  \end{displaymath}
+\end{theorem}
+
+\begin{nproof}
+  The type safety follows from an induction with
+  \ref{lemma:progress} (progress lemma) and \ref{lemma:preservation} (preservation lemma).
+\end{nproof}

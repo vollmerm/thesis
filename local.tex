@@ -1,0 +1,1080 @@
+\section{Overview}
+
+Traditional compilers are built on a number of well-defined
+intermediate abstractions and translations that close the semantic gap
+between source and target.  What we {need are analogous way-points to
+  structure compilers that target serialized-data traversals}
+(stream-processors, essentially).  Indeed, there is quite a semantic
+gap between the low-level, buffer-mutating, pointer-bumping programs,
+and a source language of high-level, pure, recursive functions on
+algebraic datatypes.  To structure the space between, we propose a
+location calculus, \ourcalc, augmented to track {\em locations} within
+regions (\eg{} byte offsets).
+
+\ourcalc follows in the tradition of typed assembly language~\cite{TAL},
+region calculi~\cite{mlkit-retrospective}, and Cyclone~\cite{cyclone-pldi}
+in that it uses types to both
+expose and make safe low-level implementation mechanisms.
+%
+%% Ultimately, our compiler output will increment pointers into memory buffers, as
+%% seen in code of the previous section.
+%
+The basic idea of \ourcalc{} is to first establish what data \emph{share} which
+logical memory regions (essentially, buffers), and in what \emph{order} those data reside,
+abstracting the details of computing exact addresses.
+%
+For example, data constructor applications, such as \lstinline{Leaf 3}, take an extra
+location argument in \ourcalc{}, specifying where the data constructor
+should place the resulting value in memory:
+% starts in memory, that is, where the data
+% constructor itself is written:
+\lstinline[mathescape]{Leaf $\;\locreg{l}{}\;$ 3}.
+%
+This location becomes part of type of the value: \lstinline[mathescape]{$\,\tyatlocreg{Tree}{\,l}{}$}.
+Every location resides in a region, and when we want to
+name that region, we write $\locreg{l}{r}$.
+
+
+Locations represent information about where values are in a store, but
+are less flexible than pointers. They are introduced {relative} to other
+locations. A location variable is either \emph{after} another
+variable, or it is at the beginning of a region,
+thus specifying a serial order.
+%so they essentially describe what \emph{order} values are in within a region.
+If location $l_2$ is declared as
+\lstinline[mathescape]{$l_2$ = after($\tyatlocreg{Tree}{l_1}{\reg}$)},
+%% where $x$ is a tree at $l_1$,
+then $l_2$ is \emph{after} every element of the tree
+rooted at $l_1$.
+
+{\emph{Regions} in \ourcalc{} represent the memory buffers containing serialized data
+  structures.  Unlike some other region calculi, in \ourcalc{}, values in a
+  region \emph{may} escape the static scope which binds and allocates that region. In
+  fact, an extension introduced later in~\secref{subsec:indirections}
+  specifically relies on inter-region pointers and coarse-grained garbage
+  collection of regions.}
+
+%% In this paper, we present a new method for building compilers to lift functions
+%% over serialized data.
+%% We also present a new calculus, \ourcalc{}, which corresponds to a simplified
+%% presentation of the core intermediate language of our compiler.
+%% %
+%% It was designed both to form a foundation for the optimizations we describe in
+%% this paper, generalizing previous work on region calculi to represent recursive
+%% programs operating on serialized data. Crucially, in addition to associating
+%% values with \emph{regions}, in \ourcalc{} values are associated with a
+
+% As shown in the grammar in \figref{fig:grammar},
+\ourcalc{} is a first-order,
+call-by-value functional language with algebraic datatypes and pattern
+matching. Programs consist of a series of datatype definitions, function
+definitions, and a main expression.
+%
+%% The algebraic data types work essentially like one would expect, but with
+%% additional machinery to handle \emph{where} a particular value is in the store
+%% and the \emph{relative position} of its fields in the store.  Every invocation
+%% of a data constructor is annotated with a location variable ---
+%
+\ourcalc{} programs can be written directly by hand, and \ourcalc{} also serves
+as a practical {\em intermediate language} for other tools or front-ends that
+want to convert computations to run on serialized data (essentially fusing a
+consuming recursion with the deserialization loop).
+%
+%% We return to this use-case in \secref{sec:impl-hical}.
+
+\paragraph{Allocating to output regions}
+%
+% \note{buildtree-shared?}
+Now that we have seen how data constructor applications are parameterized by
+locations, let us look at a more complex example than those of the prior section.
+Consider \lstinline[mathescape]{buildtree}, which constructs the same trees consumed by \lstinline[mathescape]{sum}
+and \lstinline[mathescape]{rightmost} above.  First, in the source language without locations:
+\rn{Some redundancy here w sec 3.1.. if needed could throw outsome of it and move this
+  example down there, or remove it entirely.}
+
+%% \floatstyle{plain}\restylefloat{figure}
+%% \begin{figure}
+%% \centering
+\begin{code}
+buildtree : Int -> Tree
+buildtree n = if n == 0
+              then Leaf 1
+              else Node (buildtree (n - 1))
+                        (buildtree (n - 1))
+\end{code}
+%% \vspace{-1mm}
+%% \caption{Example: Building an output data structure}
+%% \label{fig:buildtree}
+%% \vspace{-5mm}
+% \end{figure}
+% \note{TODO: vertically align the stmts}
+%
+Then in {\ourcalc}, where the type scheme binds an output rather than input location:
+% \floatstyle{plain}\restylefloat{figure}
+%\vspace{-1mm}
+%\floatstyle{boxed}\restylefloat{figure}
+%\begin{figure}[h]
+%\centering
+\begin{code}
+buildtree : forall @\locreg{l}{r}@ . Int -> @\tyatlocreg{Tree}{l}{r}@
+buildtree [@\locreg{l}{r}@] n =
+  if n == 0 then (Leaf @\locreg{l}{r}@ 1) -- write tag + int to output
+  else -- skip past tag:
+       letloc $\locreg{l_a}{r}$ = $\locreg{l}{r}$ + 1 in
+       -- build left in place:
+       let left : @\tyatlocreg{Tree}{l_a}{\reg}@ =
+           buildtree [@\locreg{l_a}{r}@] (n - 1) in
+       -- find start of right:
+       letloc $\locreg{l_b}{r}$ = after(@\tyatlocreg{Tree}{l_a}{\reg}@) in
+       -- build right in place:
+       let right : @\tyatlocreg{Tree}{l_b}{\reg}@ =
+           buildtree [@\locreg{l_b}{r}@] (n - 1) in
+       -- write datacon tag, connecting things together:
+       (Node @\locreg{l}{r}@ left right)
+  \end{code}
+%\end{figure}
+%\vspace{-3mm}
+
+\noindent
+Here, we see that \ourcalc{} must represent locations that have {\em not yet
+  been written}, \ie{} they are output destinations.  Nevertheless, in the
+recursive calls of \lstinline[mathescape]{buildtree} this location is passed as an argument: a form
+of destination-passing style~\cite{destination-passing}.
+The type system guarantees that memory will be initialized and written exactly once.
+%
+The output location is threaded through the recursion to build the left subtree,
+and then offset to compute the starting location of the right subtree.
+%
+%% Computing \lstinline[mathescape]{after($\tyatlocreg{Tree}{l_a}{\reg}$)} is a potentially expensive operation, and
+%% implementing it---or rearranging the program to avoid needing it---is the
+%% responsibility of the \ourcalc implementation (\secref{sec:impl-local}).
+{It might appear that computing
+\lstinline[mathescape]{after($\tyatlocreg{Tree}{l_a}{\reg}$)} could be quite expensive,
+if there is a large tree at that location. This does not need to be the case.
+In~\secref{sec:impl-local} we will present different techniques for efficiently
+compiling \ourcalc programs without requiring linear walks through serialized data.}
+
+%% Later
+%% (in~\secref{sec:route-ends}), we describe a compilation technique that
+%% makes obtaining the \lstinline[mathescape]{after} of a location in cases like this
+%% straightforward by having computations return the ending locations of
+%% whatever trees they traverse.
+%
+%% Furthermore, while the above \lstinline[mathescape]{buildTree} code writes the left and right subtrees {\em
+%%   before} writing the data constructor tag into the output, we will want the
+%% compiler to eventually reorder these writes to achieve a linear memory access
+%% pattern on the output region.
+
+%% \rn{May want to modify the discussion of ``size information'' below.}
+{One of the goals of \ourcalc{} is to support several compilation
+  strategies. One extreme is compiling programs to work with a representation of
+  data structures that do not include \emph{any} pointers or indirections at
+  run-time---within such a representation, the size of a value can be observed
+  by threading through ``end witnesses'' while consuming packed values: for
+  example, \lstinline[mathescape]{buildtree} above would \emph{return} $\locreg{l_b}{r}$, rather than computing
+  it with an \lstinline[mathescape]{after} operation.
+  %
+  (The end-witness strategy was first used in
+  {\em Gibbon}~\cite{ecoop17-gibbon} prior to the design of \ourcalc{},
+  which previously compiled functions on fully serialized data,
+  while not preserving asymptotic complexity.)
+  %% %% Our language allows for this by ensuring that
+  %% %% when location variables are introduced after values, a variable binding the
+  %% %% preceeding value must be in scope.
+  %% %
+  %% In \secref{sec:compiler}, we will discuss in detail how the invariants
+  %% enforced by \ourcalc{} make subsequent transformations and optimizations
+  %% more tractable.
+}
+%
+%% In practice, as a whole-program compiler, our compiler will decide
+%% whether or not particular data constructor needs {\em random-access}
+%% based on how it is used in the program. The analyses required for this
+%% are described in more detail in \secref{sec:compiler}.
+%
+%% \note{Forward reference whatever section where we add back limited random-access
+%%   capabilities.}
+%
+%% Furthermore, while our compiler does translate every program into
+%% \ourcalc{}, later stages in the compiler will relax or violate the
+%% invariants enforced by \ourcalc{}, such as the absolute ordering of
+%% values in a region.
+%% %
+%% In fact, by code generation time the compiler will
+%% have likely transformed the program to include explicit size
+%% information and inter-region pointers.
+%
+Next, we will present a formalized core subset of \ourcalc,
+%% in more detail
+%% (\secref{subsec:grammar}),
+its type system (\secref{subsec:static}),
+and its operational semantics (\secref{subsec:dynamic}).
+% which uses a store to  represent regions and locations.
+%% before moving on to implementation (\secref{sec:impl-local}, \secref{sec:impl-hical})
+%% and evaluation (\secref{sec:eval}).
+
+\section{Formal Language and Grammar}
+\label{subsec:grammar}
+
+\begin{figure}
+  \input{formal_grammar}
+  \caption{Grammar of \ourcalc{}}
+  \label{fig:grammar}
+\end{figure}
+
+\Figref{fig:grammar} gives the grammar for a formalized core of \ourcalc{}.
+%
+We use the notation $\overharpoon{x}$ to denote a vector $[
+x_1, \ldots, x_n]$, and $\overharpoon{x_{\ind}}$ the item at position
+$\ind$.
+%
+To simplify presentation, the language supports
+algebraic datatypes without any base primitive types, but could be extended in a straightforward
+manner to represent primitives such as an $\sgramwd{Int}$ type or tuples.
+%
+The expression language is based on the first-order lambda calculus,
+using A-normal form.
+%
+The use of A-normal form simplifies our formalism and proofs
+without loss of generality.
+%in ways that do not limit generality.
+%It would be straightforward to generalize to direct style.
+
+Like previous work on region-based memory~\cite{regioncalcs},
+\ourcalc{} has a special binding
+form for introducing region variables, written as
+$\sgramwd{letregion}$.
+%
+Location variables are similarly introduced by $\sgramwd{letloc}$.
+%
+The pattern-matching form $\sgramwd{case}$ binds variables to
+serialized values, as well as binding the location for each variable.
+%
+% To simplify the formalism,
+We require that each bound location in
+a source program is unique.
+%
+% This convention rules out programs with space leaks caused by
+%shadowing of \gramwd{letloc}-bound names.
+% \rn{I can't easily construct hypothetical example...}
+
+The $\sgramwd{letloc}$ expression binds locations in only three ways:
+a location is either the \emph{start} of a region (meaning, the
+location corresponds to the very beginning of that region), is
+immediately after another location, or it occurs \emph{after} the last
+position occupied by some previously allocated data constructor.
+%
+For the last case, the location is written to exist at
+$\afterl{\tyatlocreg{\TYP}{\loc}{\reg}}$, where $\loc$ is already
+bound in a region, and has a value written to it.
+
+%% \begin{comment}
+%% Second, the convention enables the dynamic semantics to treat symbolic
+%% locations at runtime as a source of dynamically fresh names (i.e., a
+%% gensym-like mechanism), which enables a simpler environment structure
+%% for tracking locations.
+%% %
+%% It is straightforward to relax these requirements.
+%% \end{comment}
+
+Values in \ourcalc{} are either (non-location) variables or
+\emph{concrete locations}.
+%
+In contrast to bound location variables, concrete locations
+do not occur in source programs; rather, they appear at runtime, created by the
+application of a data constructor, which has the effect of
+extending the store.
+%
+Every application of a data constructor writes a \emph{tag} to the store, and
+concrete locations allow the program to navigate through it.
+%
+To distinguish between concrete locations and location variables in
+the formalism, we refer to the latter as \emph{symbolic locations}.
+%
+A concrete location is a tuple
+$\concreteloc{\reg}{\ind}{\loc}$ consisting of a region, an index, and
+symbolic location corresponding to its binding site.
+%
+The first two components are sufficient to fully describe
+an \emph{address} in the store.
+
+%% \begin{comment}
+%% Rather than annotating expressions with their region (such as
+%% $\sEXPR\; @ \;\sreg$) like standard region calculi, \emph{location
+%% annotations} appear at various points in the program source, such as
+%% in types, in function declarations, and at the site of constructor
+%% application.
+%% %
+%% %% As a first-order language, functions are only defined at the top
+%% %% level. Each function has a name, a \emph{type scheme}, an argument,
+%% %% and an expression (the body of the function).  The type scheme
+%% %% consists of the types of the input and output of the function,
+%% %% parameterized by \emph{data locations} (location and region
+%% %% pair).
+%% %
+%% %% {Function application similarly requires a list of data
+%% %% locations.}
+%% %
+%% Function types are only introduced at the top level, and these
+%% functions may only be polymorphic with respect to data locations.
+%% \end{comment}
+%
+%% \mv{Explain that locations of inputs to functions must have been written,
+%% and locations of outputs to functions cannot have been written.}
+%
+%% Data locations are annotated with an arrow indicating whether they are
+%% input ($\inloc$) or output ($\outloc$) locations, which essentially is intended to represent
+%% whether the location will be associated with a value that is coming
+%% into the function as an input or a value that will be computed and
+%% returned from the function as an output. These annotations occur both
+%% in the declarations of functions and in the application of functions;
+%% in the former case, as parameters for the function, and in the latter
+%% case, as arguments to the function. In the case where data locations
+%% occur as arguments, the locations must be in scope, and their
+%% annotation of input or output must match their state at that point
+%% (so, input locations have been already written to, output locations have not).
+
+%% We elide the superscript $r$ on location variables ($\sRP$ in the
+%% grammar) when that information is not relevant.
+%
+
+%% \begin{comment}
+%% Naturally, a location's region matches the one it's derived from: in
+%% \il{letloc $\;l^r\;$ = start $\;r$}, the locations $r$
+%% match.
+%% %
+%% These regions model logically continuguous memory buffers that are
+%% growable at one end.  This is similar to traditional region
+%% systems, except that allocating to, \eg{} an MLKit region happens in
+%% units of complete objects (with pointers), whereas we permit leaving
+%% objects ``partially written'' for arbitrarily long periods of time ---
+%% separating writing the tag of a data constructor from serializing out
+%% its fields.
+%% %
+%% Indeed, the entire purpose of using a region system in \ourcalc{} is
+%% to group objects together so that their representations can be merged
+%% and compressed by ``inlining'' pointers.
+%% \end{comment}
+
+%% Pattern matching, in the form of $\sgramwd{case}$ statements, are
+%% familiar from other functional languages. Each alternative in the
+%% pattern match statement matches on a constructor, its location, and a
+%% series of variable and annotated type pairs corresponding to each
+%% field of that constructor.
+
+%% For this presentation of \ourcalc{}, we will not be too concerned with
+%% including primitive operations on, e.g., numbers, strings, etc though
+%% our full implementation obviously includes these things.  At certain
+%% points in this paper we will give examples of \ourcalc{} programs that
+%% make use of these extensions. Extending the presentation of \ourcalc{}
+%% to include such types and operations is straightforward.
+%% %
+%% \rn{Doesn't need that much discussion, but could combine this point
+%% with a bigger point about what syntactic sugar we will allow ourselves
+%% in examples.}
+
+\subsection{Static Semantics}
+\label{subsec:static}
+
+
+\begin{figure}
+  \input{formal_extended_grammar}
+  \caption{Extended grammar of \ourcalc{} for static semantics}
+  \label{fig:typegrammar}
+\end{figure}
+\begin{figure}
+  \footnotesize
+  \begin{mathpar}
+    \rtvar{}\hspace{1em}
+    \rtconcreteloc{}\\
+    \rtlet{}\hspace{1em}
+    \rtlregion{}\\
+    \rtlltag{}\hspace{1em}
+    \rtllstart{}\\
+    \rtllafter{}\hspace{1em}
+    \rtdatacon{}
+  \end{mathpar}
+  \normalsize
+  \caption{Typing judgments for \ourcalc{} (1)}
+  \label{fig:types1}
+\end{figure}
+
+%\floatstyle{boxed}\restylefloat{figure}
+\begin{figure}
+  \footnotesize
+  \begin{mathpar}
+    \rtapp{}\hspace{1em}
+    \rtfunctiondef{}\\
+    \rtpat{}\\
+    \rtcase{}\hspace{1em}
+    \rtprogram{}
+  \end{mathpar}
+  \normalsize
+   \caption{Typing judgments for \ourcalc{} (2)}
+   \label{fig:types2}
+
+\end{figure}
+
+
+
+In \figref{fig:typegrammar}, we extend the grammar with some extra
+details necessary for describing the type system.
+The typing rules for expressions in \ourcalc{} are given in
+\figref{fig:types1} and \figref{fig:types2}, where the rule form is as follows:
+%% $\RENV;\EENV;\CENV;\SENV;\TENV \vdash \EXPR : \TYP \tyatlocreg{\loc}{\reg} ; \RENV';\EENV'$.
+
+\[ \TENV;\SENV;\CENV;\AENV;\NENV \vdash \AENV'; \NENV'; \EXPR : \hTYP \]
+
+%
+
+The five letters to the left of the turnstile are different environments.
+$\TENV$ is a standard typing environment.
+$\SENV$ is a store-typing environment, which maps all
+\emph{materialized} symbolic
+locations to their types. That is, every location in $\SENV$ {\em has been written}
+and contains a value of type $\SENV(l^r)$.
+$\CENV$ is a constraint environment, which keeps
+track of how symbolic locations relate to each other.
+$\AENV$ maps each region in scope to a location, and is used to symbolically
+track the allocation and incremental construction of data structures;
+$\AENV$ can be thought of as representing the
+\emph{focus} within a region of the computation.
+% (the exact usage of $\AENV$ will be expanded on below).
+$\NENV$ is a nursery of all symbolic locations that have been allocated,
+but not yet written to.
+Locations are removed from $\NENV$
+upon being written to, as the purpose is to prevent multiple writes to
+a location.
+Both $\AENV$ and $\NENV$ are threaded through the typing
+rules, also occuring in the output (to the right of the
+turnstile).
+
+%% To give the typing rules, we first extend the grammar with some extra
+%% details that are necessary for keeping track of location and region
+%% variables. A \emph{location state} is a three-tuple of boolean values,
+%% representing whether a location has been written to, whether the
+%% location was introduced after some other location, and whether a
+%% different location has been introduced after the location. An
+%% environment maps locations to their location states.
+%% %
+%% The location state environment is \emph{threaded through} the
+%% typing rules: it occurs as a premise (before the turnstile)
+%% and alongside the type after the turnstile. This allows the typing
+%% rules to encode \emph{changes} in the state of locations (for
+%% example, recording that they have been written to).
+
+The \textsc{\tvar} rule ensures that the variable is in scope, and
+the symbolic location of the variable has been written to.
+%
+\textsc{\tconcreteloc} is very similar, and also just ensures that
+the symbolic location has been written to.
+%
+\textsc{\tlet} is straightforward, but note that along with $\TENV$,
+it also extends $\SENV$ to signify that the location $\loc$ has
+materialized.
+
+In \textsc{\tlregion}, extending $\AENV$ with an empty allocation pointer
+brings the region $\reg$ in scope, and also indicates that
+a symbolic location has not yet been allocated in this region.
+
+There are three rules for introducing locations
+(\textsc{\tllstart}, \textsc{\tlltag} and \textsc{\tllafter}, all shown in \Figref{fig:types1}),
+corresponding to three ways of allocating a new location in a
+region. A new location is either: at the start of a region, one cell
+after an existing location, or after the data structure rooted at an
+existing location. Introducing locations in this fashion sets up an
+ordering on locations, and the typing rules must ensure that the
+locations are used in a way that is consistent with this intended
+ordering.
+%
+To this end, each such rule extends the constraint environment $\CENV$
+with a constraint that is based on how the location was introduced,
+and $\NENV$ is extended to indicate that the new location is in scope
+and unwritten.
+
+Additionally, the location-introduction rules use $\AENV$ to ensure that a program
+must introduce locations in a certain pattern (corresponding to the
+left-to-right allocation and computation of fields, as explained
+in~\secref{subsec:dynamic}).
+%% Recall from earlier, constructing a data structure proceeds through a
+%% series of steps: allocating a location for a tag, allocating a
+%% location after the tag for the first field (if there are fields), then
+%% for each field alternating materializing fields and allocating after
+%% them, until finally writing the initial tag.
+%
+In $\AENV$, each region is mapped to either the right-most allocated
+symbolic location in that region (if it is unwritten), or to the
+symbolic location of the most recently materialized data structure.
+This mapping in $\AENV$ is used by the typing rules to ensure that:
+%
+(1) \textsc{\tllstart} may only introduce a location at the start
+of a region once;
+%
+(2) \textsc{\tlltag} may only introduce a location if an unwritten location has
+just been allocated in that region (to correspond to the tag of some
+soon-to-be-built data structure); and
+%
+(3) \textsc{\tllafter} may only introduce a location if a data structure has
+just been materialized at the end of the region, and the programmer wants to
+allocate \emph{after} it. To attempt, for example, to allocate the location of
+the right sub-tree of a binary tree \emph{before} materializing the left sub-tree would
+be a type error.
+%
+{Each location-introduction rule also ensures that the
+introduced location must be written to at some point, by checking that
+it's absent from the nursery after evaluating the expression.}
+
+%% When a fresh
+%% region $\reg$ is bound, $\AENV$ is extended to map that region
+%% to $\emptyset$, indicating no locations have been allocated in it,
+%% and so \textsc{\tllstart} may introduce a location at the start of $\reg$
+%% and update $\AENV$ to note that a location has been allocated there.
+%% For allocating a location intended as the first field after a tag,
+%% \textsc{\tlltag} expects $\AENV$ to map to some location $\loc'$
+%% which is also in $N$, because the tag of a dat
+
+%% and each enforces that the location will be allocated in a region in a
+%% specific way, extending the location constraint environment with
+%% details of where the location was allocated relative to the rest of
+%% the region. $\AENV$ and $\NENV$ are also extended to reflect this allocation.
+
+In order to type an application of a data constructor, \textsc{\tdatacon} starts by
+ensuring that the tag being written and all the fields have the correct type.
+Along with that, the locations of all the fields of the constructor must
+also match the expected constraints. That is, the location of the first field
+should be immediately after the constructor tag, and there should be
+appropriate $\mathit{after}$ constraints for other fields in the location constraint environment.
+After the tag has been written, the location $\loc$ is removed from the
+nursery to prevent multiple writes to a location.
+%
+{
+%
+As mentioned earlier, LoCal uses destination-passing style. To guarantee destination-passing
+style, it suffices to ensure that a function returns its value in a location passed from its caller.
+The LoCal type system enforces this property by using constraints of the form $l' \neq l$ in the premises
+of the typing rules of the operations that introduce new locations
+}
+
+{As demonstrated by \textsc{\tdatacon}, the type system enforces a
+  particular ordering of writes to ensure the resulting tree is
+  serialized in a certain order. Some interesting patterns are
+  expressible with this restriction (for example, writing or reading
+  multiple serialized trees in one function), and, as we will address
+  shortly in \secref{subsec:indirections}, \ourcalc is flexible enough
+  to admit extensions that soften this restriction and allow for
+  programmers to make use of more complicated memory layouts.}
+
+{A simple demonstration of the type system is shown in
+Table~\ref{table:types-example}, which tracks how $\AENV$, $\CENV$,
+and $\NENV$
+% (allocation point, constraints, nursery)
+change after each line in a simple expression that builds
+a binary tree with leaf children. Introducing $\loc$ at the top
+establishes that it is at the beginning of $\reg$,
+$\AENV$ maps $\reg$ to $\loc$, and $\NENV$ contains $\loc$.
+The location for the left sub-tree,
+$\loc_a$, is defined to be $+ 1$ after it, which updates $\reg$ to
+point to $\loc_a$ in $\AENV$ and adds a constraint to $\CENV$ for
+$\loc_a$. Actually constructing the \texttt{Leaf} in the next line
+removes $\loc_a$ to $\NENV$, because it has been written to. Once $\loc_a$
+has been written, the next line can introduce a new location $\loc_b$
+\emph{after} it, which updates the mapping in $\AENV$ and adds a
+new constraint to $\CENV$. Once $\loc_b$ has been written and removed
+from $\NENV$ in the next line, the final \texttt{Node} can be constructed,
+which expects the constraints to establish that $\loc$ is before $\loc_a$,
+which is before $\loc_b$.}
+
+%% Additional rules (such as for function application, pattern matching)
+%% are conventional%
+%% \iftoggle{EXTND}{
+%% and are in the Appendix,~\appendixref{subsec:types2}.
+%% }{
+%% and are available in the Appendix of the extended version~\cite{LoCal-tr}
+%% }
+
+%% Two rules (\textsc{\tcase}, \textsc{\tpat}) cover pattern matching. \ldots
+
+%% \note{We could also potentially explain the $\loc \neq \loc_i$ bit in \tpat.}
+
+%All the other typing judgements are straightforward.
+
+To finish out the typing rules, \Figref{fig:types2} contains rules for
+function application and definition, as well as pattern matching.
+%
+Function application in \textsc{\tapp} ensures the location of the result of
+the application is initially unwritten, and is considered written afterward.
+%
+Types and locations for the function are pulled from the function signature.
+%
+Pattern matching is handled by \textsc{\tcase} and \textsc{\tpat}, which
+are straightforward.
+%
+The final rule type checks a whole program, consisting of datatype
+and function definitions.
+
+To simplify the formalism and proofs, we restricted typing rules
+somewhat so that, in effect, the rules restrict well-typed expressions
+so that they can return only the the result of a freshly allocated
+constructor application.
+%
+Consequently, it is not possible, for instance, to type the following
+expression, because the right-hand side is a value and, as such, does
+not allocate.
+%
+\begin{code}
+let x : @\tyatlocreg{T}{l}{r}@ = y in ...
+\end{code}
+%
+This restriction is enforced by there being an assertion of the form
+$\locreg{\loc}{\reg} \in \NENV$ in the premise of the typing rules of
+the non-value expressions, such that $\tyatlocreg{\TYP}{\loc}{\reg}$
+is the result type of the given expression.
+%
+Lifting this restriction is conceptually straightforward, but would
+require either added complexity to the substitution lemma or the use
+of a different factoring of the grammar and typing rules.
+%
+Similarly, our formalism and proofs could be extended to treat
+primitive types, such as ints, bools, tuples, etc., as well as with
+offsets and indirections in data constructors, with some conceptually
+straightforward extensions to the formalism.
+
+
+%% \setlength{\tabcolsep}{2pt}
+%% \floatstyle{plaintop}\restylefloat{table}
+
+\begin{table}[]
+  \centering
+%% \begin{adjustbox}{width=0.75\linewidth,center}
+
+\begin{tabular}{llll}
+  Code & $\AENV$ & $\CENV$ & $\NENV$ \\ \hline
+  \begin{code}
+letloc $\locreg{l}{r}$ =
+    start($r$)
+  \end{code} & $\{r \mapsto \locreg{l}{r} \}$ & $\emptyset$ & $\{\locreg{l}{r}\}$ \\
+  \begin{code}
+letloc $\locreg{l_a}{r}$ = $\locreg{l}{r}$ + 1
+  \end{code} &
+  $\{r \mapsto \locreg{l_a}{r} \}$ &
+  $\{ \locreg{l_a}{r} \mapsto \locreg{l}{r} + 1 \}$  &
+  $\{\locreg{l}{r},\locreg{l_a}{r}\}$ \\
+  \begin{code}
+let x : @\tyatlocreg{T}{l_a}{r}@ =
+    Leaf $\locreg{l_a}{r}$ 1
+  \end{code} &
+  $\{ r \mapsto \locreg{l_a}{r} \}$ &
+  $\{ l_a \mapsto \locreg{l}{r} + 1 \}$ &
+  $\{\locreg{l}{r}\}$ \\
+  \begin{code}
+letloc $\locreg{l_b}{r}$ =
+    after(@\tyatlocreg{T}{l_a}{r}@)
+  \end{code} &
+  $\{ r \mapsto \locreg{l_b}{r} \}$ &
+  \makecell[cl]{$\{ \locreg{l_a}{r} \mapsto \locreg{l}{r} + 1,$\\\;$\locreg{l_b}{r} \mapsto \mathit{after}(\tyatlocreg{T}{l_a}{r})\}$} &
+  $\{ \locreg{l}{r}, \locreg{l_b}{r} \}$ \\
+  \begin{code}
+let y : @\tyatlocreg{T}{l_b}{r}@ =
+    Leaf $\locreg{l_b}{r}$ 2
+  \end{code} &
+  $\{ r \mapsto \locreg{l_b}{r} \}$ &
+  \makecell[cl]{$\{ \locreg{l_a}{r} \mapsto l + 1,$\\\;$\locreg{l_b}{r} \mapsto \mathit{after}(\tyatlocreg{T}{l_a}{r})\}$} &
+  $\{ \locreg{l}{r} \}$ \\
+  \begin{code}
+Node $\locreg{l}{r}$ x y
+  \end{code} &
+  $\{ r \mapsto \locreg{l}{r} \}$ &
+  \makecell[cl]{$\{ \locreg{l_a}{r} \mapsto \locreg{l}{r} + 1,$\\\;$\locreg{l_b}{r} \mapsto \mathit{after}(\tyatlocreg{T}{l_a}{r})\}$} &
+  $\emptyset$ \\
+&&& \\
+\end{tabular}
+%% \end{adjustbox}
+\caption{Step-by-step example of type checking a simple expression.}
+\label{table:types-example}
+\end{table}
+
+
+\subsection{Dynamic Semantics}
+\label{subsec:dynamic}
+%\floatstyle{boxed}\restylefloat{figure}
+\begin{figure}
+  \input{formal_dynamics_grammar}
+  \caption{Extended grammar of \ourcalc{} for dynamic semantics}
+  \label{fig:opergram}
+\end{figure}
+
+\begin{figure}
+  \small
+  \begin{mathpar}
+    \mprset{flushleft}
+    \rddatacon{}
+
+    \rdletlocstart{}\\
+    \rdletloctag{}
+
+    \rdletlocafter{}\\
+
+    \rdletexp{}\\
+    \rdletval{}
+
+    \rdletregion{}\\
+    \rdapp{}\\
+    \rdcase{}\\
+  \end{mathpar}
+  \normalsize
+  \caption{Dynamic semantics rules for \ourcalc{}}
+  \label{fig:dynamic}
+\end{figure}
+
+
+The dynamic semantics for expressions in \ourcalc{} are given in
+ \figref{fig:dynamic1} and \figref{fig:dynamic2}, where the transition rule is as follows.
+%
+\begin{displaymath}
+\STOR;\MENV;\EXPR \stepsto \STOR';\MENV';\EXPR'
+\end{displaymath}
+%
+To model the behavior of reading and writing from an indexed
+memory, we introduce the \emph{store}, $\STOR$.
+%
+The store is a map from regions to \emph{heaps}, where each heap
+consists of an array of \emph{cells}, which contain store values
+(data constructor tags).
+%
+To bridge from symbolic to concrete locations, we use the
+\emph{location map}, $\MENV$, which is a map from symbolic
+to concrete locations.
+%
+
+Case expressions are treated by the \textsc{\dcase{}} rule.
+%
+The objective of the rule is to load the tag of the constructor $\DC$
+located at $\concreteloc{\reg}{\ind}{}$ in the store and dispatch
+the corresponding case.
+%
+%% For simplicity, \ourcalc{} requires that all patterns are exhaustive,
+%% and our type system ensures that the there always exists a constructor
+%% tag at the specified location at the expected type.
+%
+The expression produced by the right-hand side of the rule is the body
+of the pattern, in which all pattern-bound variables are replaced by
+the concrete locations of the fields of the constructor $\DC$.
+
+The concrete locations of the fields are obtained by the following
+process.
+%
+If there is at least one field, then its starting address is the
+position one cell after the constructor tag.
+%
+The starting addresses of subsequent fields depend on the sizes of the
+trees stored in previous fields.
+
+A feature of \ourcalc{} is the flexibility it provides to pick the
+serialization layout.
+%
+Our formalism uses our \emph{end-witness rule} to abstract from
+different layout decisions.
+%
+Given a type $\TYP$, a starting address
+$\concreteloc{\reg}{\ind_{s}}{}$, and store $\STOR$, the rule below
+asserts that address of the end witness is
+$\concreteloc{\reg}{\ind_{e}}{}$.
+%
+\begin{displaymath}
+  \ewitness{\TYP}{\concreteloc{\reg}{\ind_{s}}{}}{\STOR}{\concreteloc{\reg}{\ind_{e}}{}}
+\end{displaymath}
+%
+Using this rule, the starting address of the second field is obtained
+from the end witness of the first, the starting address of the
+third from the end witness of the second, and so on.
+
+The allocation and finalization of a new constructor is achieved by
+some sequence of transitions, starting with the \textsc{\dletloctag{}} rule, then
+involving some number of transitions of the \textsc{\dletlocafter{}} rule,
+depending on the number of fields of the constructor, and finally
+ending with the \textsc{\ddatacon{}} transition.
+%
+The \textsc{\dletloctag{}} rule allocates one cell for the tag of some new
+constructor of a yet-to-be determined type, leaving it to later to
+write to the new location.
+%
+The resulting configuration binds its $\loc$ to the address
+$\concreteloc{\reg}{\ind+1}{}$, that is, the address one cell past
+given location $\loc'$ at $\concreteloc{\reg}{\ind}{}$.
+%
+Fields that occur after the first are allocated by the
+\textsc{\dletlocafter{}} rule.
+%
+Here, its $\loc$ is bound to the address \concreteloc{\reg}{j}{} one
+past the last cell of the constructor represented by its given
+symbolic location $\loc_1$.
+%
+Like the \textsc{\dcase{}} rule, the required address is obtained by
+application of end-witness rule to the starting address of the given
+$\loc_1$ at the type of the corresponding field $\TYP$.
+%
+The final step in creating a new data constructor instance
+is the \textsc{\ddatacon{}} rule.
+%
+It writes the specified constructor tag $\DC$ at the address in the
+store represented by the symbolic location $\loc$.
+
+The \textsc{\dletlocstart{}} rule for the \sgramwd{letloc} with \sgramwd{(start r)}.
+expression binds the location to the starting address in the region
+and starts running the body.
+
+The \textsc{\dletexp{}} rule for let-expressions evaluates the let-bound
+expression to a value and the \textsc{\dletval{}} rule substitutes the value for
+the let-bound variable in the body.
+%
+The \textsc{\dapp{}} rule for function applications looks up the function by name
+in the top-level environment and substitutes arguments for parameters
+in the function body, substitutes argument symbolic locations for
+parameter symbolic locations, then starts the resulting function body
+running.
+%
+The \textsc{\dletregion{}} rule for the \sgramwd{letregion} expression binds the
+new region and starts running the body.
+%
+
+The driver which runs an \ourcalc{} program initially loads all data
+types, functions, type checks them, and if successful, then seeds the
+$Function$, $\typeofcon$, and $\typeoffield$ environments.
+%
+Let $\EXPR_0$ be the main expression.
+%
+If $\EXPR_0$ type checks with respect to the \textsc{\tprogram{}} rule, then
+the main program is safe to run.
+%
+The initial configuration for the machine with an empty store is
+\begin{displaymath}
+\emptyset; \set{\loc \mapsto \concreteloc{\reg}{0}{}}; \EXPR_0,
+\end{displaymath}
+which is, by itself, not particularly interesting or useful.
+%
+It is, however, straightforward to construct a type-safe initial configuration
+whose store is nonempty, as long as the initial configuration
+has a store that is well formed, as described in \Secref{sec:well-formedness}.
+%
+The program can start taking evaluation steps from this configuration.
+
+\subsection{Example: Allocating a Binary Tree.}
+\label{sec:dynsem-example}
+%
+Consider this code snippet of \ourcalc{}.
+%
+\begin{code}
+letloc @$\locreg{l_1}{\reg}$@ = @$\locreg{l_0}{\reg}$@ + 1 in
+let a : @\tyatlocreg{Tree}{l_1}{r}@ = (Leaf @$\locreg{l_1}{\reg}$@) in
+letloc @$\locreg{l_2}{\reg}$@ = (after (@\tyatlocreg{Tree}{l_1}{r}@)) in
+let b : @\tyatlocreg{Tree}{l_2}{r}@ = (Leaf @$\locreg{l_2}{\reg}$@) in
+Node @$\locreg{l_0}{\reg}$@ a b
+\end{code}
+%
+Assume that the store starts out with a fresh heap, $\STOR = \set{\reg
+  \mapsto \emptyset}$ and the location $\locreg{l_0}{\reg}$ maps to
+$\concreteloc{\reg}{0}{}$ in the location map.
+%
+After stepping past the first line, the \textsc{\dletloctag{}} step has
+allocated a cell for the tag of the interior node and bound the
+location $\locreg{\loc_1}{\reg}$ to $\concreteloc{\reg}{1}{}$.
+%
+After the next line, the \textsc{\ddatacon{}} transition writes a leaf node to
+the store at the address represented by $\locreg{\loc_1}{\reg}$:
+$\STOR = \set{\reg \mapsto \set{1 \mapsto \mathtt{Leaf}}}$.
+%
+The second \gramwd{letloc} obtains the starting address for the second
+leaf node by using end witness of the previous leaf node.
+%
+The write of the second leaf node appears in the store after
+the next line, leaving the following store:
+$
+\STOR = \set{\reg \mapsto \set{1 \mapsto \mathtt{Leaf}, 2 \mapsto \mathtt{Leaf}}}$.
+%
+Finally, after the \textsc{\ddatacon{}} step taken for the last line, the store
+contains the finalized allocation:
+$\STOR = \set{\reg \mapsto \set{0 \mapsto \mathtt{Node}, 1 \mapsto \mathtt{Leaf}, 2 \mapsto \mathtt{Leaf}}}$.
+%
+
+The end-witness judgement of the new data constructor is the
+following:
+$\ewitness{\mathtt{Tree}}{\concreteloc{\reg}{0}{}}{\STOR}{\concreteloc{\reg}{3}{}}$
+%
+The judgement applies, in part, because, as expected, the tag at the
+address $\concreteloc{\reg}{0}{}$ is a tag of type $\mathtt{Tree}$.
+%
+In addition, because the tag indicates an interior node with two
+subtrees for fields, the judgement obligation extends to recursively
+showing (1) that the end witness of the first leaf node (also at type
+$\mathtt{Tree}$) at $\concreteloc{\reg}{1}{}$ has an end witness
+(which is $\concreteloc{\reg}{2}{}$), (2) that the second field has an
+end witness starting at the end witness of the first field, namely
+$\concreteloc{\reg}{2}{}$, and ending at some higher address (which in
+this case is $\concreteloc{\reg}{3}{}$), and (3) finally that the end
+witness of the second field is the end witness of the entire
+constructor, as is the case here.
+
+\subsection{Type Safety}
+
+\fixme{The key to proving type safety is our store-typing rule will be written here!}
+%
+\begin{displaymath}
+  \storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}
+\end{displaymath}
+%
+The store typing specifies three categories of invariants.
+%
+The first enforces that allocations occur in the sequence
+specified by the constraint environment $\CENV$.
+%
+In particular, if there is some location $\loc$ in the domain of
+$\CENV$, then the location map and store have the expected
+allocations at the expected types.
+%
+For instance, if $(\loc \mapsto
+\afterl{\tyatlocreg{\TYP}{\loc'}{\reg}}) \in \CENV$, then $\loc'$ maps
+to $\concreteloc{\reg}{\ind_1}{}$ and $\loc$ to
+$\concreteloc{\reg}{\ind_2}{}$ in the location map, and $\ind_2$ is
+the end witness of $\ind_1$ at type $\TYP$ in the store, at region
+$\reg$.
+%
+The second category enforces that, for each symbolic location such
+that $(\loc \mapsto \TYP) \in \SENV$, there is some
+$\concreteloc{\reg}{\ind_1}{}$ for $\loc$ in the location map and
+$\ind_1$ has some end witness $\ind_2$ at type $\TYP$.
+%
+The final category enforces that each address in the store is written
+once.
+%
+This property is asserted by insisting that, if $\loc \in \NENV$, then
+there is some $\concreteloc{\reg}{\ind}{}$ for $\loc$ in the location
+map, but there is no write to for $\ind$ at $\reg$ in the store.
+%
+To support this property, there are two additional conditions which
+require that the most recently allocated location (tracked by
+to $\AENV, \NENV$) is at the end of its respective region.
+
+To support this behavior, there are two additional conditions in this
+category that enforce linearity of allocation.
+%
+The first one captures the situation when there is an allocation in
+flight, such as is the case in the postcondition of allocating
+a tag (and the corresponding binding the cell to $\loc$).
+%
+In this case, the typing rule specifies that $(\reg \mapsto \loc) \in
+A$ and $\loc \in \NENV$.
+%
+The requirement is that the address bound to $\loc$ is the maximum
+position in the location map for the region $\reg$ and that this
+position is past the end of any address already written in the store
+at $\reg$.
+The second condition captures the other situation, just after
+a field has been allocated and finalized, which is occurs
+when $(\reg \mapsto \loc) \in A$ and $(\loc \mapsto \TYP) \in \SENV$
+for the location $\loc$ representing the field.
+%
+In this case, the condition requires that the address of the end
+witness of the field is the maximum of all other addresses in the
+store at region $\reg$.
+
+The type safety of \ourcalc{} follows from the following result.
+
+\begin{theorem}[Type safety]
+  \label{theorem:type-safety}
+\begin{displaymath}
+  \begin{aligned}
+  \text{If} \;\; & (\emptyset;\SENV;\CENV;\AENV;\NENV \vdash \AENV';\NENV';\EXPR : \hTYP) \wedge
+                   (\storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}) \\
+  \text{and} \;\; & \STOR;\MENV;\EXPR \stepsto^n \STOR';\MENV';\EXPR' \\
+  \text{then} \;\; & (\EXPR' \; \mathit{value}) \vee
+                     (\exists \STOR'', \MENV'', \EXPR'' . \; \STOR';\MENV';\EXPR' \stepsto \STOR'';\MENV'';\EXPR'')
+  \end{aligned}
+  \end{displaymath}
+\end{theorem}
+
+\begin{nproof}
+  The type safety follows from an induction with
+  the progress and preservation lemmas \fixme{which will be explained below}
+\end{nproof}
+
+\section{Extensions}\label{sec:extensions}
+
+\note{Talk about extensions we made to LoCal, like offsets and indirections.}
+\note{Add other junk here that doesn't fit in other sections.}
+
+\subsection{Offsets and Indirections}\label{subsec:indirections}
+
+As motivated in \secref{sec:bg}, it is sometimes desirable to be
+able to ``jump over'' part of a serialized tree.
+%
+As presented so far, \ourcalc{} makes use of an end witness judgment
+to determine the end of a particular data structure in memory.
+%
+The simplest computational interpretation of this technique is,
+however, a linear scan through the store.
+%
+Luckily, extending the language to account for storing and making use
+of \emph{offset} information for certain datatypes is
+straightforward, and does not add conceptual difficulty to
+neither the formalism nor type-safety proof.
+
+Such an extension may use annotations on datatype declarations
+that identify which fields of a given constructor are provided \emph{offsets}
+and to permit cells in the store to hold offset values.
+%
+Because the offsets of a given constructor are known from its type,
+the \textsc{\dletloctag{}} rule can allocate space for offsets when it
+allocates space for the tag.
+%
+It is straightforward to fill the offset fields because \textsc{\ddatacon{}}
+rule already has in hand the required offsets, which are provided in
+the arguments of the constructor.
+%
+Finally, the \textsc{\dcase{}} rule can use offsets instead of
+the end-witness rule.
+
+\emph{Indirections} permit fields of data constructors to point across
+regions, and thus require adding an annotation form (e.g., an
+annotation on the type of a constructor field to indicate an
+indirection) and extending the store to hold pointers.
+%
+Fortunately, as discussed later, regions in \ourcalc{} are never
+collected; they are garbage collected in our implementation.
+% and thus the extension adds conceptual difficulty to
+% neither the formalism nor proof.
+%
+Every time an indirection field is constructed, space for the pointer
+is allocated using a transition rule similar to the \textsc{\dletloctag{}}
+rule.
+%
+The \textsc{\ddatacon{}} rule receives the address of the indirection in the
+argument list, just like any other location and writes the indirection
+pointer to the address of the destination field.
+%
+
+To type check, the type system extends with two new typing rules and a
+new constraint form to indicate indirections.
+%
+To maintain type safety in the presence of offsets and indirections,
+the store typing rule needs to be extended to include them.
+%
+Because the programmer is not manually managing the creation or use of offsets
+or indirections (they are below the level of abstraction, indicated by
+annotating the datatype, but not changing the code), the store-typing rule
+generalizes straightforwardly and the changes preserve type safety.
+%\rn{Still might be good to show some kind of concrete example of these annotations.}
+
+In datatype annotations each field can be marked to store its offset in the constructor {\em
+  or} be represented by an indirection pointer (currently not both):
+\begin{code}
+data T = K1 T (Ind T) | K2 T (Offset T) | K3 T
+\end{code}
+Type annotations would also be the place to express {\em permutations} on fields
+that should be serialized in a different order, (e.g., postorder).  But it is
+equivalent to generating \ourcalc with reordered fields in the source program.
+
+\subsection{Parallelism}\label{subsec:parallelism}
+
+\note{Summarize the things we did in the Parallel LoCal paper here.}
+\note{They need to be slightly adapted to the LoCal grammar I'm already using
+  in my thesis.}
