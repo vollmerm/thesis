@@ -162,6 +162,9 @@ of space (20 bytes per internal node and 8 bytes per leaf node), even though it
 contains only 12 bytes of ``useful'' data.  Storing the pointers that maintain
 the internal structure of the tree represents a significant storage overhead.
 
+\note{Include a picture, maybe from previous papers, of a sample tree vs a sample
+  byte array. Also use that particular as an ongoing example.}
+
 When relying on the usual pointer-based representation, this data
 %In memory, this data structure can easily be represented using pointers from
 %\il{Node}s to their children, and
@@ -437,3 +440,5 @@ of these approaches are programmer-directed: either \emph{ad hoc},
 application-specific
 implementations~\cite{makino90,goldfarb13sc,Meyerovich2011}, or driven by
 library functions that the programmer must exploit~\cite{ren13cgo,ren14taco}.
+
+

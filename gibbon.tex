@@ -71,14 +71,14 @@ The inference procedure uses a combination of standard techniques from the liter
 approach for satisfying \ourcalc's particular needs\footnote{The {\em
     Directed Inference Engine for region Types}, if you will.}.
 %
-Because the inference must determine
-not only what region a value belongs to, but \emph{where} in that region it will
-be, the inference procedure returns a set of constraints for an expression similar to the
-constraint environment used in the typing rules in \figref{fig:types}, which are
-used to determine placement of symbolic location bindings. Additionally, certain locations
-are marked as \emph{fixed} (function parameters, data constructor arguments), and when two
-fixed locations attempt to unify it signals the need for an indirection, and the
-program must be transformed accordingly.
+Because the inference must determine not only what region a value belongs to,
+but \emph{where} in that region it will be, the inference procedure returns a
+set of constraints for an expression similar to the constraint environment used
+in the typing rules in \figref{fig:types1} and \figref{fig:types2}, which are
+used to determine placement of symbolic location bindings. Additionally, certain
+locations are marked as \emph{fixed} (function parameters, data constructor
+arguments), and when two fixed locations attempt to unify it signals the need
+for an indirection, and the program must be transformed accordingly.
 
 Our current implementation adds an extra variant to every data type
 \footnote{These indirections do double-duty in allowing the memory
