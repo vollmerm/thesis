@@ -728,7 +728,7 @@ Node $\locreg{l}{r}$ x y
 
 
 The dynamic semantics for expressions in \ourcalc{} are given in
- \figref{fig:dynamic1} and \figref{fig:dynamic2}, where the transition rule is as follows.
+ \figref{fig:dynamic}, where the transition rule is as follows.
 %
 \begin{displaymath}
 \STOR;\MENV;\EXPR \stepsto \STOR';\MENV';\EXPR'
@@ -997,6 +997,9 @@ The type safety of \ourcalc{} follows from the following result.
   the progress and preservation lemmas \fixme{which will be explained below}
 \end{nproof}
 
+\note{Copy over some of the high level ideas from the appendix, and maybe remove
+  the appendix entirely, since it was already published in a tech report.}
+
 \section{Extensions}\label{sec:extensions}
 
 \note{Talk about extensions we made to LoCal, like offsets and indirections.}
@@ -1078,3 +1081,13 @@ equivalent to generating \ourcalc with reordered fields in the source program.
 \note{Summarize the things we did in the Parallel LoCal paper here.}
 \note{They need to be slightly adapted to the LoCal grammar I'm already using
   in my thesis.}
+
+\section{Linear Cursors}\label{subsec:linear}
+
+\note{Brief lead-in about how this is a different language and why it's in this
+  section.}
+\note{Copy the types from the ECOOP paper and/or the Linear Haskell paper.}
+\note{Reference this in the Gibbon chapter when we get to the cursor-passing
+  language.}
+\note{Add a forward reference to this at the beginning of the chapter so it
+  doesn't come out of nowhere.}
