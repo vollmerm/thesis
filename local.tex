@@ -7,7 +7,7 @@ between source and target.  What we {need are analogous way-points to
 (stream-processors, essentially).  Indeed, there is quite a semantic
 gap between the low-level, buffer-mutating, pointer-bumping programs,
 and a source language of high-level, pure, recursive functions on
-algebraic datatypes.  To structure the space between, we propose a
+algebraic datatypes.  To structure the space between, I propose a
 location calculus, \ourcalc, augmented to track {\em locations} within
 regions (\eg{} byte offsets).
 
@@ -151,7 +151,7 @@ and then offset to compute the starting location of the right subtree.
 {It might appear that computing
 \lstinline[mathescape]{after($\tyatlocreg{Tree}{l_a}{\reg}$)} could be quite expensive,
 if there is a large tree at that location. This does not need to be the case.
-In~\secref{sec:impl-local} we will present different techniques for efficiently
+In~\secref{sec:impl-local} I will present different techniques for efficiently
 compiling \ourcalc programs without requiring linear walks through serialized data.}
 
 %% Later
@@ -204,7 +204,7 @@ compiling \ourcalc programs without requiring linear walks through serialized da
 %% have likely transformed the program to include explicit size
 %% information and inter-region pointers.
 %
-Next, we will present a formalized core subset of \ourcalc,
+Next, I will present a formalized core subset of \ourcalc,
 %% in more detail
 %% (\secref{subsec:grammar}),
 its type system (\secref{subsec:static}),
@@ -224,7 +224,7 @@ and its operational semantics (\secref{subsec:dynamic}).
 
 \Figref{fig:grammar} gives the grammar for a formalized core of \ourcalc{}.
 %
-We use the notation $\overharpoon{x}$ to denote a vector $[
+Iuse the notation $\overharpoon{x}$ to denote a vector $[
 x_1, \ldots, x_n]$, and $\overharpoon{x_{\ind}}$ the item at position
 $\ind$.
 %
@@ -251,7 +251,7 @@ The pattern-matching form $\sgramwd{case}$ binds variables to
 serialized values, as well as binding the location for each variable.
 %
 % To simplify the formalism,
-We require that each bound location in
+It is required that each bound location in
 a source program is unique.
 %
 % This convention rules out programs with space leaks caused by
@@ -289,7 +289,7 @@ Every application of a data constructor writes a \emph{tag} to the store, and
 concrete locations allow the program to navigate through it.
 %
 To distinguish between concrete locations and location variables in
-the formalism, we refer to the latter as \emph{symbolic locations}.
+the formalism, I refer to the latter as \emph{symbolic locations}.
 %
 A concrete location is a tuple
 $\concreteloc{\reg}{\ind}{\loc}$ consisting of a region, an index, and
@@ -417,7 +417,7 @@ an \emph{address} in the store.
 
 
 
-In \figref{fig:typegrammar}, we extend the grammar with some extra
+In \figref{fig:typegrammar}, I extend the grammar with some extra
 details necessary for describing the type system.
 The typing rules for expressions in \ourcalc{} are given in
 \figref{fig:types1} and \figref{fig:types2}, where the rule form is as follows:
@@ -559,7 +559,7 @@ of the typing rules of the operations that introduce new locations
   particular ordering of writes to ensure the resulting tree is
   serialized in a certain order. Some interesting patterns are
   expressible with this restriction (for example, writing or reading
-  multiple serialized trees in one function), and, as we will address
+  multiple serialized trees in one function), and, as I will address
   shortly in \secref{subsec:indirections}, \ourcalc is flexible enough
   to admit extensions that soften this restriction and allow for
   programmers to make use of more complicated memory layouts.}
@@ -612,7 +612,7 @@ are straightforward.
 The final rule type checks a whole program, consisting of datatype
 and function definitions.
 
-To simplify the formalism and proofs, we restricted typing rules
+To simplify the formalism and proofs, I restricted typing rules
 somewhat so that, in effect, the rules restrict well-typed expressions
 so that they can return only the the result of a freshly allocated
 constructor application.
@@ -735,14 +735,14 @@ The dynamic semantics for expressions in \ourcalc{} are given in
 \end{displaymath}
 %
 To model the behavior of reading and writing from an indexed
-memory, we introduce the \emph{store}, $\STOR$.
+memory, the semantics make use of a \emph{store}, $\STOR$.
 %
 The store is a map from regions to \emph{heaps}, where each heap
 consists of an array of \emph{cells}, which contain store values
 (data constructor tags).
 %
-To bridge from symbolic to concrete locations, we use the
-\emph{location map}, $\MENV$, which is a map from symbolic
+To bridge from symbolic to concrete locations, I use the
+\emph{location map}, $\MENV$, to map symbolic locations
 to concrete locations.
 %
 
@@ -1002,7 +1002,7 @@ The type safety of \ourcalc{} follows from the following result.
 
 \section{Extensions}\label{sec:extensions}
 
-\mav{Talk about extensions we made to LoCal, like offsets and indirections.}
+\mav{Talk about extensions I made to LoCal, like offsets and indirections.}
 \mav{Add other junk here that doesn't fit in other sections.}
 
 \subsection{Offsets and Indirections}\label{subsec:indirections}
@@ -1094,10 +1094,10 @@ representation and control flow ``bottom out'' to sequential pieces of work.
 That is, granularity-control in the data mirrors traditional granularity-control
 in parallel task scheduling.
 
-We implemented this strategy in Gibbon and found that it performed as well or
-better than parallel GHC and parallel MLton on a variety of benchmarks. When
-utilizing 18 cores, our geomean speedup is $1.87\times$ and $3.16\times$ over
-parallel MLton and GHC, respectively.
+I worked with the rest of the Gibbon compiler team to implement this strategy
+and found that it performed as well or better than parallel GHC and parallel
+MLton on a variety of benchmarks. When utilizing 18 cores, our geomean speedup
+is $1.87\times$ and $3.16\times$ over parallel MLton and GHC, respectively.
 
 There are several opportunities for parallelism in \ourcalc{} programs.
 %
