@@ -84,7 +84,7 @@ consuming recursion with the deserialization loop).
 
 \paragraph{Allocating to output regions}
 %
-% \note{buildtree-shared?}
+% \mav{buildtree-shared?}
 Now that we have seen how data constructor applications are parameterized by
 locations, let us look at a more complex example than those of the prior section.
 Consider \lstinline[mathescape]{buildtree}, which constructs the same trees consumed by \lstinline[mathescape]{sum}
@@ -107,7 +107,7 @@ buildtree n = if n == 0
 %% \label{fig:buildtree}
 %% \vspace{-5mm}
 % \end{figure}
-% \note{TODO: vertically align the stmts}
+% \mav{TODO: vertically align the stmts}
 %
 Then in {\ourcalc}, where the type scheme binds an output rather than input location:
 % \floatstyle{plain}\restylefloat{figure}
@@ -192,7 +192,7 @@ compiling \ourcalc programs without requiring linear walks through serialized da
 %% based on how it is used in the program. The analyses required for this
 %% are described in more detail in \secref{sec:compiler}.
 %
-%% \note{Forward reference whatever section where we add back limited random-access
+%% \mav{Forward reference whatever section where we add back limited random-access
 %%   capabilities.}
 %
 %% Furthermore, while our compiler does translate every program into
@@ -594,7 +594,7 @@ which is before $\loc_b$.}
 
 %% Two rules (\textsc{\tcase}, \textsc{\tpat}) cover pattern matching. \ldots
 
-%% \note{We could also potentially explain the $\loc \neq \loc_i$ bit in \tpat.}
+%% \mav{We could also potentially explain the $\loc \neq \loc_i$ bit in \tpat.}
 
 %All the other typing judgements are straightforward.
 
@@ -997,13 +997,13 @@ The type safety of \ourcalc{} follows from the following result.
   the progress and preservation lemmas \fixme{which will be explained below}
 \end{nproof}
 
-\note{Copy over some of the high level ideas from the appendix, and maybe remove
+\mav{Copy over some of the high level ideas from the appendix, and maybe remove
   the appendix entirely, since it was already published in a tech report.}
 
 \section{Extensions}\label{sec:extensions}
 
-\note{Talk about extensions we made to LoCal, like offsets and indirections.}
-\note{Add other junk here that doesn't fit in other sections.}
+\mav{Talk about extensions we made to LoCal, like offsets and indirections.}
+\mav{Add other junk here that doesn't fit in other sections.}
 
 \subsection{Offsets and Indirections}\label{subsec:indirections}
 
@@ -1078,7 +1078,24 @@ equivalent to generating \ourcalc with reordered fields in the source program.
 
 \subsection{Parallelism}\label{subsec:parallelism}
 
-\note{Summarize the things we did in the Parallel LoCal paper here.}
-\note{They need to be slightly adapted to the LoCal grammar I'm already using
+\mav{Summarize the things we did in the Parallel LoCal paper here.}
+
+So far, this section has presented a language for performing tree traversals
+over serialized data (with some potential indirection). This data representation
+strategy works well for sequential programs, there is an intrinsic tension if we
+want to parallelize these tree traversals. As the name implies, efficiently
+serialized data must often be read serially. To change that, first, enough {\em
+indexing} data must be left in the representation in order for parallel tasks to
+``skip ahead'' and process multiple subtrees in parallel. Second, the allocation
+areas must be bifurcated to allow allocation of outputs in parallel.
+
+Here I will outline how \ourcalc{} can be extended to support parallel
+computation. In this strategy, follows function: data representation is
+random-access only insofar as parallelism is needed, and both data
+representation and control flow ``bottom out'' to sequential pieces of work.
+That is, granularity-control in the data mirrors traditional granularity-control
+in parallel task scheduling.
+
+\mav{They need to be slightly adapted to the LoCal grammar I'm already using
   in my thesis.}
 
