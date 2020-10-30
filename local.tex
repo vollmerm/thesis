@@ -1078,8 +1078,6 @@ equivalent to generating \ourcalc with reordered fields in the source program.
 
 \subsection{Parallelism}\label{subsec:parallelism}
 
-\mav{Summarize the things we did in the Parallel LoCal paper here.}
-
 So far, this section has presented a language for performing tree traversals
 over serialized data (with some potential indirection). This data representation
 strategy works well for sequential programs, there is an intrinsic tension if we
@@ -1096,6 +1094,104 @@ representation and control flow ``bottom out'' to sequential pieces of work.
 That is, granularity-control in the data mirrors traditional granularity-control
 in parallel task scheduling.
 
-\mav{They need to be slightly adapted to the LoCal grammar I'm already using
-  in my thesis.}
+We implemented this strategy in Gibbon and found that it performed as well or
+better than parallel GHC and parallel MLton on a variety of benchmarks. When
+utilizing 18 cores, our geomean speedup is $1.87\times$ and $3.16\times$ over
+parallel MLton and GHC, respectively.
 
+There are several opportunities for parallelism in \ourcalc{} programs.
+%
+The first kind of parallelism is available when \ourcalc{} programs access
+the store in a read-only fashion, such as the program that calculates
+the size of a binary tree (as shown in \Figref{fig:sizefunc}).
+\begin{figure}
+\begin{code}
+size : forall @\locreg{l}{r}@ . @\tyatlocreg{Tree}{l}{r}@ -> Int
+size [@\locreg{l}{r}@] t = case t of
+              Leaf -> 1
+              Node (a : @\tyatlocreg{Tree}{l_a}{r}@) (b : @\tyatlocreg{Tree}{l_b}{r}@)
+               -> (size [@\locreg{l_a}{r}@] a) + (size [@\locreg{l_b}{r}@] b)
+\end{code}
+\caption{\ourcalc function computing the size of a binary tree}
+\label{fig:sizefunc}
+\end{figure}
+%
+However, even though the recursive calls in the \il{Node} case can
+safely evaluate in parallel, there is a subtelty: parallel evaluation
+is efficient only if the \il{Node} constructor stores offset
+information for its child nodes.
+%
+If it does, then the address of \il{b} can be calculated in constant
+time, thereby allowing the calls to proceed immediately in parallel.
+%
+If there is no offset information, then the overall tree traversal is
+necessarily sequential, because the starting address of \il{b} can be
+obtained only after a full traversal of \il{a}.
+%
+As such, there is a tradeoff between space and time, that is, the cost
+of the space to store the offset in the \il{Node} objects versus the
+time of the sequential traversal (e.g., of \il{a}) forced by the
+absence of offsets.
+
+Programs that write to the store also provide opportunities for
+parallelism.
+%
+The most immediate such opportunity exists when the program performs
+writes that affect different regions.
+%
+For example, the writes to construct the leaf nodes for \il{a} and
+\il{b} can happen in parallel because different regions cannot overlap
+in memory.
+%
+\begin{code}
+letregion @ra@ in
+letregion @rb@ in
+letloc @\locreg{la}{ra}@ = start @ra@ in
+letloc @\locreg{lb}{rb}@ = start @rb@ in
+let a : @\tyatlocreg{Tree}{la}{ra}@ = Leaf @\locreg{la}{ra}@ in
+let b : @\tyatlocreg{Tree}{lb}{ra}@ = Leaf @\locreg{lb}{rb}@ in
+@\ldots@
+\end{code}
+%
+There is another kind of parallelism that is more challenging
+to exploit, but is at least as important as the others:
+%
+the parallelism that can be realized by allowing different fields
+of the same constructor to be filled in parallel.
+%
+This is crucial in \ourcalc{} programs, where large, serialized data
+frequently occupy only a small number of regions, and yet there are
+opportunities to exploit parallelism in their construction.
+%
+Consider the \il{buildtree} program, which creates a binary tree of a
+given size \il{n} in a given region \il{r}.
+%
+\mav{reference buildTree code here}
+% 
+If we want to access the parallelism between the recursive calls,
+we need to break the data dependency that the right branch has on
+the left.
+%
+The starting address of the right branch, namely $\locreg{l_b}{r}$, is
+assigned to be end witness of the left branch by the \il{letloc}
+instruction.
+%
+But the end witness of the left branch is, in general, known only
+after the left branch is completely filled, which would effectively
+sequentialize the computation.
+%
+One non-starter would be to ask the programmer to specify the
+size of the left branch up front, which would make it possible to
+calculate the starting address of the right branch.
+%
+Unfortunately, this approach would introduce safety issues, such as
+incorrect size information, of exactly the kind that \ourcalc{}
+is designed to prevent.
+%
+Instead, we explore an approach that is safe-by-construction and
+efficient, as we explain next.
+
+\mav{Insert brief overview of parallel local semantics}
+
+An evaluation of the implementation of parallel \ourcalc is given in
+\secref{subsec:parallelbench}.
