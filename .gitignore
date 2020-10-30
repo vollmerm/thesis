@@ -10,3 +10,8 @@
 *.fdb_latexmk
 thesis.pdf
 *-eps-converted-to.pdf
+activateeditingmarks
+*.dvi
+*_plot.tex
+*_plot.eps
+.auctex-auto

@@ -1,8 +1,14 @@
 \documentclass[showabstract,showacknowledgments,showpreface,showdedication]{iuphd} 
 
 \PassOptionsToPackage{dvipsnames}{xcolor}
-\usepackage{marvosym,listings,etoolbox,amsmath}
-\usepackage{mathtools}
+\usepackage{marvosym}
+\usepackage{listings}
+\usepackage{etoolbox}
+\newcommand\hmmax{0}
+\newcommand\bmmax{0}
+\usepackage{amsmath}
+% \usepackage{txfonts}
+% \usepackage{mathtools}
 \usepackage{MnSymbol}
 \usepackage{xspace}
 \usepackage{mathpartir}
@@ -10,12 +16,10 @@
 \usepackage{hyperref}
 \usepackage{graphicx}
 \usepackage{subcaption}
-\usepackage{xspace}
 \usepackage{float}
 \usepackage{makecell}
 \usepackage{adjustbox}
 \usepackage{balance}
-\usepackage{MnSymbol}%
 \makeatletter
 \let\th@plain\relax
 \makeatother
@@ -97,6 +101,7 @@
         {>->}{>->}3
         {>>=}{>>=}3
         {->}{{$\rightarrow$}}2
+        {->.}{{$\multimap$}}2
         {>=}{{$\geq$}}2
         {<-}{{$\leftarrow$}}2
         {<=}{{$\leq$}}2

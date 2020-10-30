@@ -56,7 +56,7 @@ for example, the {\em unannotated} examples we've seen in this paper.
   datatypes, such that a list of closures could be serialized in a dense
   representation.)}
 
-%% \note{Using multiple representations for the same type in the same program is an area
+%% \mav{Using multiple representations for the same type in the same program is an area
 %% for future study.
 %% \Secref{sec:eval} includes the multi-pass program \il{repmax}
 %% where one pass incurs overhead to satisfy the representation needs of another.
@@ -459,8 +459,8 @@ rightmost tr =
          (a : @\tyatlocreg{Tree}{l_a}{r_1}@) (b : @\tyatlocreg{Tree}{l_b}{r_1}@)
       -> rightmost [@\locreg{l_{b}}{r_1}@] *ran
 \end{code}
-\note{TODO: Clarify notation for using RAN pointers}
-% \note{TOOD: Make the `read RAN and then call rightmost with it' step explicit in the example.}
+\mav{TODO: Clarify notation for using RAN pointers}
+% \mav{TOOD: Make the `read RAN and then call rightmost with it' step explicit in the example.}
 
 
 %% That's because it never uses the right child of the tree, which it cannot reach
@@ -609,7 +609,7 @@ $\locreg{l_c}{r}$, using a new \il{return} form in the IR.
 
 \subsubsection{Converting to \lamcur}
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-\label{sec:cursorize}
+\label{subsubsec:cursorize}
 
 In this stage, we convert from \ourcalc{} into \lamcur{}, switching to
 imperative cursor manipulation.
@@ -625,11 +625,11 @@ imperative cursor manipulation.
 %% %% cursors.
 %% %
 %% %% {Cursorize}
-%% %% \note{Probably has too much in common with the ECOOP17 paper.}
+%% %% \mav{Probably has too much in common with the ECOOP17 paper.}
 At this stage, location arguments and return values turn into first-class cursor
 values (pointers into memory buffers representing regions).  The primitive
 operations on cursors read or write one atomic value, and advance the cursor to
-the next spot.  We drop much of the type information at this phase, and
+the next spot.  We drop much of the type information at this phase (see \secref{subsec:linear} for how to preserve types), and
 \il{rightmost} becomes:
 \begin{code}
 rightmost : Cursor -> Int
@@ -661,6 +661,81 @@ in memory, which aids prefetching and caching,
 because writes are ordered only by
 data-dependencies for computing \emph{locations}, with no ordering needed
 on the side-effects themselves.
+
+\subsection{Linear Cursors}\label{subsec:linear}
+
+In the process described previously in \secref{subsubsec:cursorize}, Gibbon transforms
+programs into \lamcur{}, which uses a cursor-passing style. As Gibbon is now,
+these cursor-passing programs carry no type information on the cursors
+themselves---the compiler has erased information about packed types. This is
+convenient if the goal is to eventually generate C code, which is what Gibbon
+does.
+
+However, there are other situations where you may want cursor types to ensure
+that serialized data is written and read safely, just like \ourcalc{}; for
+example, if a programmer wants to embed a safe interface for programming with
+serialized data into a mainstream functional language like Haskell. In this
+section I will briefly present a system for typing cursors, and demonstrate its
+relationship to \lamcur{} and how it may be expressed in Linear
+Haskell~\cite{linear-haskell}. This initially appeared in~\cite{ecoop17-gibbon}
+as a typed intermediate language for Gibbon \auditme{check this!}, and subsequently
+was adapted in~\cite{linear-haskell} as an example use case for linear types in
+Haskell.
+
+The basic idea is that cursors are \emph{indexed} by a list of types.
+Write cursors are indexed by a list of types that corresponds to the values
+that must be written to that cursor, and read cursors are indexed by a list of
+types that corresponds to the values that can be read from the cursor.
+Cursors must be \emph{linear}, and operations that consume cursors return
+new cursors with updated types. An example interface for the simple
+binary tree data type we have been using is given in \Figref{fig:linpacktree},
+and an interface for manipulating general packed data is given in
+\figref{fig:lininterface}.
+
+\mav{Give basic overview of Linear Haskell syntax used here, like Ur.}
+
+\begin{figure}
+\begin{code}
+data Tree = Leaf Int | Branch Tree Tree
+pack :: Tree ->. Packed [Tree]
+unpack :: Packed [Tree] ->. Tree
+caseTree :: Packed (Tree : r) ->.
+            (Packed (Int : r) ->. a) ->
+            (Packed (Tree : Tree : r) ->. a) -> a
+\end{code}
+\caption{An interface for safely packing and unpacking a binary tree
+  in Linear Haskell}
+\label{fig:linpacktree}
+\end{figure}
+\begin{figure}
+\begin{code}
+read :: Storable a => Packed (a : r) ->. (a, Packed r)
+write :: Storable a => a ->. Needs (a : r) t ->. Needs r t
+finish :: Needs [] t ->. Ur (Packed [t])
+newBuffer :: (Needs [a] a ->. Ur b) ->. b
+done :: Packed [] ->. ()
+\end{code}
+\caption{An interface for manipulating packed values in Linear Haskell}
+\label{fig:lininterface}
+\end{figure}
+\begin{figure}
+\begin{code}
+sumLeaves :: Packed [Tree] -> Int
+sumLeaves p = fst (go p)
+  where go p = caseTree p
+           read -- Leaf case
+           (\p2 -> let (n,p3) = go p2
+                       (m,p4) = go p3
+                   in (n+m,p4))
+\end{code}
+\caption{A Linear Haskell function for summing the leaves of a packed
+  binary tree}
+\label{fig:linsumleaves}
+\end{figure}
+\mav{Copy the types from the ECOOP paper and/or the Linear Haskell paper.}
+\mav{Reference this in the Gibbon chapter when we get to the cursor-passing
+  language.}
+
 
 \subsection{Runtime System}\label{subsec:rts}
 % ================================================================================
@@ -836,7 +911,7 @@ opportunity for constant-sized regions.
 
 \section{Applications and Evaluation}
 \label{section:applications}
-\note{General overview of the kinds of things we tested in Gibbon, how fast they were, etc.}
+\mav{General overview of the kinds of things we tested in Gibbon, how fast they were, etc.}
 
 \subsection{Microbenchmarks}
 
@@ -854,7 +929,7 @@ Gibbon/NonPacked/CNF/CapNP respectively, and
 
 %% \tabref{tab:litmus-table} shows the results.
 
-\note{Re-write to either remove or better explain difference between Gibbon1 and Gibbon2.}
+\mav{Re-write to either remove or better explain difference between Gibbon1 and Gibbon2.}
 
 The column labeled ``Gibbon2'' shows performance of \lamadt programs
 (low-level \ourcalc control was not needed for any of these)
@@ -1204,9 +1279,9 @@ take less than 440ms, but run together take 480ms.  Yet the latter time is still
 
 \subsection{Data Processing Benchmarks}
 
-\note{Overview of how this technique can be applied to data processing programs.}
-\note{If data to be processed is already serialized then this avoids marshaling cost.}
-\note{If data to be processed is in some other format then we can still be faster by
+\mav{Overview of how this technique can be applied to data processing programs.}
+\mav{If data to be processed is already serialized then this avoids marshaling cost.}
+\mav{If data to be processed is in some other format then we can still be faster by
   transforming the data into a format that is more efficient to process (like the JSON
   to byte array transformation necessary for the Twitter benchmark). And in these cases
   it is often still faster than libraries that are meant to process the data in its
@@ -1268,7 +1343,7 @@ We process the 9.1M tweets in 0.39s.
 
 \subsubsection{Point Correlation}
 
-\note{Summarize Laith's point correlation benchmark (from ECOOP
+\mav{Summarize Laith's point correlation benchmark (from ECOOP
   paper), updating the language to match the new terminology from
   LoCal.}
 Point correlation  is a well-known algorithm used in data mining~\cite{gray2000n}:
@@ -1339,14 +1414,14 @@ tree is relatively less, reducing the opportunity for improvement.
   \label{fig:point_corr_plot}
 \end{figure}
 
-\subsection{Abstract Syntax Trees}
+\subsection{Abstract Syntax Trees}\label{subsec:ast}
 
-\note{This is where my results for ASTs will eventually go.}
-\note{I can maybe put the Racket count nodes benchmark in here too, as a kind of
+\mav{This is where my results for ASTs will eventually go.}
+\mav{I can maybe put the Racket count nodes benchmark in here too, as a kind of
   AST traversal.}
 
-\subsection{Parallelism}
+\subsection{Parallel Programming Benchmarks}\label{subsec:parallelbench}
 
-\note{Copy over the benchmark results from the parallel gibbon paper.}
-\note{Paraphrase a brief summary of parallel gibbon again, reference the
+\mav{Copy over the benchmark results from the parallel gibbon paper.}
+\mav{Paraphrase a brief summary of parallel gibbon again, reference the
   earlier section in it.}

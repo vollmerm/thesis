@@ -82,7 +82,7 @@ and OCaml. In addition to presenting \ourcalc, in this thesis I will cover
 the design and implementation of the Gibbon compiler, as well as an evaluation
 of the compiler on various benchmarks and applications.
 
-\note{TODO summarize some applications of Gibbon here}
+\mav{TODO summarize some applications of Gibbon here}
 
 This thesis will be broken down into three parts. \Cref{chapter:intro} (this
 chapter) gives an overview of \ourcalc, with background, motivation, and related
@@ -96,7 +96,7 @@ A full proof of type safety for the \ourcalc language is included in \Cref{appen
 %% \section{Background}\label{sec:bg}
 % ================================================================================
 
-%% \note{Many programs batch-process input data from disk or network---parsing
+%% \mav{Many programs batch-process input data from disk or network---parsing
 %% logs and reading serialized data formats such as JSON or protobufs.  These
 %% programs spend significant time simply \emph{deserializing} data into a
 %% memory format that the program can directly work with: for example,
@@ -162,7 +162,7 @@ of space (20 bytes per internal node and 8 bytes per leaf node), even though it
 contains only 12 bytes of ``useful'' data.  Storing the pointers that maintain
 the internal structure of the tree represents a significant storage overhead.
 
-\note{Include a picture, maybe from previous papers, of a sample tree vs a sample
+\mav{Include a picture, maybe from previous papers, of a sample tree vs a sample
   byte array. Also use that particular as an ongoing example.}
 
 When relying on the usual pointer-based representation, this data
@@ -171,7 +171,7 @@ When relying on the usual pointer-based representation, this data
 can be readily traversed using standard idioms to perform computations such as summing all the leaf values, as shown in \Figref{fig:haskell_sumtree}.
 
 
-\note{TODO: include C++ pointer-based sum function}
+\mav{TODO: include C++ pointer-based sum function}
 
 But when represented on disk or sent over the wire, the same tree structure
 would not preserve pointers from a node to its children. Instead, the tree
@@ -242,7 +242,7 @@ char* add1(char* tin, char* tout) {
 \caption{add1 example}
 \end{figure}
 
-% \note{TODO: fix up and include add1 tree example here}
+% \mav{TODO: fix up and include add1 tree example here}
 As another example, consider a function that traverses a binary tree as defined
 previously, returns a new binary tree such that each integer has been incremented
 by one. This is again straightforward to describe recursively in a language
@@ -296,7 +296,7 @@ sum [@\locreg{l}{r}@] t = case t of
 \label{fig:gibbon_sumtree}
 \end{figure}
 
-\note{TODO: include packed add1 gibbon function}
+\mav{TODO: include packed add1 gibbon function}
 
 This code operates on serialized data, taking locations of that data (input and
 output) as additional function arguments.  It is a {\em region-polymorphic}
