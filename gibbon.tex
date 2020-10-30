@@ -664,9 +664,9 @@ on the side-effects themselves.
 
 \subsection{Linear Cursors}\label{subsec:linear}
 
-In the process described previously in \secref{subsubsec:cursorize}, Gibbon transforms
-programs into \lamcur{}, which uses a cursor-passing style. As Gibbon is now,
-these cursor-passing programs carry no type information on the cursors
+In the process described previously in \secref{subsubsec:cursorize}, Gibbon
+transforms programs into \lamcur{}, which uses a cursor-passing style. As Gibbon
+is now, these cursor-passing programs carry no type information on the cursors
 themselves---the compiler has erased information about packed types. This is
 convenient if the goal is to eventually generate C code, which is what Gibbon
 does.
@@ -678,9 +678,9 @@ serialized data into a mainstream functional language like Haskell. In this
 section I will briefly present a system for typing cursors, and demonstrate its
 relationship to \lamcur{} and how it may be expressed in Linear
 Haskell~\cite{linear-haskell}. This initially appeared in~\cite{ecoop17-gibbon}
-as a typed intermediate language for Gibbon \auditme{check this!}, and subsequently
-was adapted in~\cite{linear-haskell} as an example use case for linear types in
-Haskell.
+as a typed intermediate language for an earlier version of the Gibbon compiler,
+and subsequently was adapted in~\cite{linear-haskell} as an example use case for
+linear types in Haskell.
 
 The basic idea is that cursors are \emph{indexed} by a list of types.
 Write cursors are indexed by a list of types that corresponds to the values
@@ -702,6 +702,9 @@ unpack :: Packed [Tree] ->. Tree
 caseTree :: Packed (Tree : r) ->.
             (Packed (Int : r) ->. a) ->
             (Packed (Tree : Tree : r) ->. a) -> a
+-- unsafe/internal, write tags
+startLeaf :: Needs (Tree : r) t ->. Needs (Int : r) t
+startBranch :: Needs (Tree : r) t ->. Needs (Tree : Tree : r) t
 \end{code}
 \caption{An interface for safely packing and unpacking a binary tree
   in Linear Haskell}
@@ -729,6 +732,23 @@ sumLeaves p = fst (go p)
                    in (n+m,p4))
 \end{code}
 \caption{A Linear Haskell function for summing the leaves of a packed
+  binary tree}
+\label{fig:linsumleaves}
+\end{figure}
+\begin{figure}
+\begin{code}
+mapLeaves :: (Int -> Int) -> Packed [Tree] ->. Packed [Tree]
+mapLeaves fn pt = newBuffer (extract . go pt)
+  where
+    extract (inp,outp) = case done inp of () -> finish outp
+    go :: Packed (Tree : r) ->. Needs (Tree : r) t ->.
+          (Packed r, Needs r t)
+    go p = caseTree (\p o -> let (x,p') = read p
+                             in (p', writeLeaf (fn x) o))
+                    (\p o -> let (p',o') = go p (writeBranch o)
+                             in go p' o')
+\end{code}
+\caption{A Linear Haskell function for mapping over the leaves of a packed
   binary tree}
 \label{fig:linsumleaves}
 \end{figure}
