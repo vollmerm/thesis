@@ -1,11 +1,11 @@
 Many programs running today use heap object representations that are {\em fixed}
 by the language runtime system.
 % , which are not free to vary based on the workload.
-For instance, the Java or Haskell runtimes dictate an object layout, and the
+For example, the Java and Haskell runtimes dictate an object layout, and the
 compiler must stick to it for all programs.
 %
 In contrast, when humans optimize a program, one of their primary {\em levers on
-performance} is changing data representation.  For example, an HPC programmer
+performance} is changing data representation.  An HPC programmer
 knows how to pack a regular tree into a byte array for more efficient
 access~\cite{makino90,goldfarb13sc,Meyerovich2011}.
 
@@ -157,13 +157,44 @@ In memory, each node in this tree is either a \il{Leaf} node, typically
 consisting of a header word (denoting that it is a \il{Leaf}) and another word
 holding the integer data, or an interior \il{Node}, consisting of a header word
 and {\em two} double words (on a 64-bit system) holding pointers to its
-children. A tree with 2 internal nodes and 3 leaf nodes, then, occupies 64 bytes
-of space (20 bytes per internal node and 8 bytes per leaf node), even though it
-contains only 12 bytes of ``useful'' data.  Storing the pointers that maintain
+children. Depending on the language and runtime system, there is likely additional
+space for storing other information about the object, but this is the basic layout.
+
+For example, a C
+compiler uses 96 bytes
+of memory to represent the tree shown in
+Figure~\ref{fig:intro-tree-unpacked}. On the other hand, if we are
+sending the tree over the network, we would naturally use a more
+compact form in serializing it, as shown in
+Figure~\ref{fig:intro-tree-packed}.  In the latter version, we use the
+same 24 bytes for the data in the leaves, but only 5 bytes for the
+spine (capturing the ``tags'' of the 5 nodes in the tree), rather than
+72.  
+% A tree with 2 internal nodes and 3 leaf nodes, then, occupies 64 bytes
+% of space (20 bytes per internal node and 8 bytes per leaf node), even though it
+% contains only 12 bytes of ``useful'' data.
+Storing the pointers that maintain
 the internal structure of the tree represents a significant storage overhead.
 
-\mav{Include a picture, maybe from previous papers, of a sample tree vs a sample
-  byte array. Also use that particular as an ongoing example.}
+\begin{figure}
+  \begin{subfigure}[t]{\linewidth}
+    \centering
+    \includegraphics[scale=0.5]{intro-tree-unpacked}
+    \caption{Standard representation of a tree structure in C: by default,
+      word-sized tags {\em and} pointers.}
+    \label{fig:intro-tree-unpacked}
+  \end{subfigure}
+  \begin{subfigure}[t]{\linewidth}
+    \centering
+    \includegraphics[scale=0.5]{intro-tree-packed}
+    \caption{Serialized version of the same tree.  Not to scale: tags take one
+      byte and integers eight.}
+    \label{fig:intro-tree-packed}
+  \end{subfigure}
+  \caption{Standard and serialized representations of trees}
+  \label{fig:intro-fig}
+\end{figure}
+
 
 When relying on the usual pointer-based representation, this data
 %In memory, this data structure can easily be represented using pointers from
@@ -181,6 +212,16 @@ linearized in a left-to-right preorder, containing {\em tags} to mark data
 constructors and atomic fields such as integers, but ditching the pointers.
 Because it contains no pointers, this serialized representation is
 significantly more compact.
+%
+Further, a tree traversal processing this memory representation
+follows a precisely linear memory access pattern, because the data is
+already laid out in a preorder traversal.
+%
+On architectures with inexpensive unaligned access, such as modern
+x86, this is a desirable in-memory representation as well as a
+serialization format.\footnote{Even restricted to aligned access, we
+  would still shrink from 72 bytes to 20 by switching to a packed
+  format.}
 %
 But without this structural information, in most settings the
 pre-order serialization would be deserialized prior to processing,
@@ -279,10 +320,10 @@ needed---and read out the appropriate data, all without the safety net of a
 type checker. Hence, writing code to work directly on the serialized data can
 be tedious and error-prone.
 
-I propose instead to write the above example in a language, \emph{\ourcalc},
-expressly designed to use dense serializations for its values. The \ourcalc
-\il{sum} function in \Figref{fig:gibbon_sumtree} extends the simple functional
-one above with region and location annotations.
+Instead, my proposal is to write the above example in a language,
+\emph{\ourcalc}, that is \emph{expressly designed to use dense serializations}
+for its values. The \ourcalc \il{sum} function in \Figref{fig:gibbon_sumtree}
+extends the simple functional one above with region and location annotations.
 
 \begin{figure}
 \begin{code}
@@ -315,6 +356,12 @@ enforce that adjacent fields be serialized consecutively.
 
 
 \section{Background and Related Work}\label{sec:bg}
+
+My work on \ourcalc{} builds on a lot of existing research on programming languages,
+compilers, and systems. In this section I will outline some of this background, and
+relate this existing research to the research I am presenting in this thesis.
+
+\paragraph{Serialized data}
 
 Many libraries exist for working with serialized data, and a few
 % The library approach is more common, with
@@ -349,12 +396,24 @@ into its own region of the heap
 %% objects, and turning a value of type \il{T} into a \il{Compact T}.
 After compaction, the CNF can be stored externally and loaded
 back into the heap later.
-%
+
+\mav{Include an example and some further explanation of Haskell CNF}
+
 {Persistent languages tackle the problem of automatically moving data between disk
 and in-memory representations~\cite{persistent-java,persistent-object-systems,persistent-objects-thor}, and can swizzle pointers as part of this
 translation to create more efficient representations. However, like CNF, these
 representations still maintain pointers, so cannot realize the full advantage of
 our system.}
+
+\paragraph{Tracking resource usage in types}
+
+\mv{Include some references for ordered types and linear types, as well as region types.
+  There's a lot of related work there to talk about with respect to the techniques going
+  into the type system, even if they're not really related to the overall goal of programming
+  with serialiezd data.
+}
+
+\paragraph{Compiler support for external dense data}
 
 If we look instead at compiler support for computing with data in dense or
 external forms, there are many compilers for stream processing
@@ -363,6 +422,9 @@ XPath~\cite{xpath-streams}---that generate efficient computations over data
 streams.
 These are somewhat related, but \ourcalc differs in targeting general
 purpose recursive functions over algebraic datatypes.
+
+\mav{Include brief overview of XPath and Stream-It/WaveScript.}
+
 %
 %% In this category, the main published approach is our prior work on Gibbon~\cite{ecoop17-gibbon},
 %% which compiles idiomatic programs to operate
@@ -375,12 +437,18 @@ purpose recursive functions over algebraic datatypes.
 %% type-system to enforce correct handling of regions and locations within
 %% serialized data---which provides a much stronger foundation for building such compilers.
 
+\paragraph{Fusion and deforestation}
+
 The problem of computing \emph{without} deserializing can be viewed as a
 \emph{{fusion/deforestation}} problem: to fuse the compute loop with the
 deserialize loop.  But traditional deforestation
 approaches~\cite{wadler-deforestation}, don't rise to being able to handle
 a full deserializer, and popular approaches based on more restrictive {\em combinator
-libraries}~\cite{stream-fusion} are less expressive than \lamadt and \ourcalc.
+  libraries}~\cite{stream-fusion} are less expressive than \lamadt and \ourcalc.
+
+\mav{Include brief overview of the history of deforestation}
+
+\paragraph{Ornaments}
 
 \emph{Ornaments} are a body of theory regarding connections between related
 data structure that differ based on additions or
@@ -397,8 +465,9 @@ ornament, and thus lifting functions across that isomorphism is not supported.
 %% \ourcalc does not allow construction of cyclic values (only DAGs), so it is less
 %% related to graph-processing systems.
 
+\paragraph{Compiler optimizations for tree traversals}
 
-Finally, \ourcalc relates to a broader literature on optimizing
+\ourcalc relates to a broader literature on optimizing
 tree-traversing programs and heap representations.
 %
 There has been significant work in optimizing the layout and
@@ -418,6 +487,19 @@ avoidance of pointer indirection. Other spatial locality
 work~\cite{Truong1998,Lattner2005,Chilimbi1999a} has similar effects and
 limitations to cache-conscious structure layout.
 
+One exception is Chilimbi et al.'s work on {\em automatic structure
+splitting}~\cite{Chilimbi1999b}, where objects are transformed into split
+representations, allowing hot fields from multiple objects to be co-located on
+a single cache line while those objects' cold fields are placed elsewhere.
+Because this layout optimization changes the internal representation of the
+object, Chilimbi et al. develop a compiler pass that automatically transforms
+code to work with the split representation. The transformations for structure
+splitting concern how to access object fields, and hence, unlike our work, do
+not require deeper transformations to remove the pointer dereferences inherent
+in traversing linked data structures. Indeed, neither this work nor
+cache-conscious structure placement affect the behavior of pointers in data
+structures.
+
 \emph{Automatic pool allocation}~\cite{Lattner2005} proposes
 allocating disjoint data structures into disjoint partitions of
 memory, and this approach can be extended with compression
@@ -430,15 +512,50 @@ compression optimization both shrinks the overall representation of
 the data structure (as in our packed representation) and utilizes
 compiler rewrites to do so (as in our compiler transformations).
 
-Tree linearization, and the attendant changes required to traversal code, are
-common in high-performance computing settings, especially for
-vectorization~\cite{makino90,goldfarb13sc,Meyerovich2011,ren13cgo,ren14taco}.
-These approaches, by closely matching data structure layout to the traversal
-behavior of specific applications, can eliminate many pointer dereferences,
-compress data structures, and simplify traversal implementations. However, all
-of these approaches are programmer-directed: either \emph{ad hoc},
-application-specific
-implementations~\cite{makino90,goldfarb13sc,Meyerovich2011}, or driven by
-library functions that the programmer must exploit~\cite{ren13cgo,ren14taco}.
+% Tree linearization, and the attendant changes required to traversal code, are
+% common in high-performance computing settings, especially for
+% vectorization~\cite{makino90,goldfarb13sc,Meyerovich2011,ren13cgo,ren14taco}.
+% These approaches, by closely matching data structure layout to the traversal
+% behavior of specific applications, can eliminate many pointer dereferences,
+% compress data structures, and simplify traversal implementations. However, all
+% of these approaches are programmer-directed: either \emph{ad hoc},
+% application-specific
+% implementations~\cite{makino90,goldfarb13sc,Meyerovich2011}, or driven by
+% library functions that the programmer must exploit~\cite{ren13cgo,ren14taco}.
 
+\paragraph{Array-based approaches to traversing tree-like data}
 
+Hsu looks at a representation of abstract syntax trees that uses a matrix
+layout, allowing operations to be specified in a data-parallel manner without
+traversing pointers~\cite{hsu2016key}. While this representation shares a goal
+with ours of avoiding pointers, it is not ``packed''---the representation
+requires a dense representation of a sparse matrix---and hence does not yield
+the type of space savings we target.
+
+In the high-performance computing community, linearizing trees and tree traversals for improved
+performance has been a common technique~\cite{makino90,goldfarb13sc}. These
+linearizations tend to be {\em ad hoc}, written specifically for a given
+application, and each application must be re-written by hand to benefit. This
+contrasts with our compiler-based approach which allows programmers to write
+using idiomatic traversal algorithms, relying on the compiler to synthesize
+the packed representation as well as the algorithm to traverse that
+representation.
+
+Similar {\em ad hoc} layout transformations have recently been pursued in the
+context of vectorization~\cite{Meyerovich2011,ren13cgo,ren14taco}. Meyerovich
+et al. discuss different linearization schemes that can promote packed SIMD
+loads and stores, improving vectorization efficiency~\cite{Meyerovich2011}.
+These layouts have the implicit effect of eliminating pointer dereferences, as
+in our packed representations, but rely on index arithmetic to traverse
+formerly-linked nodes, rather than encoding particular traversal orders. Ren
+et al. look at a wide range of tree layouts for vectorization, each targeted
+at different traversal patterns~\cite{ren13cgo,ren14taco}. These layouts are
+chosen to match the traversal patterns of an application, enabling the removal
+of pointers, as in our layouts. Ren et al. use a library-based approach:
+applications are written using high-level tree interfaces, with specific
+layouts chosen based on hardware and application considerations. In contrast,
+our work focuses on compiler-driven transformations of both the tree layout
+and the code that traverses the tree.
+
+\mav{Have a few paragraphs on general array programming and on flattening
+  and nested data parallelism.}

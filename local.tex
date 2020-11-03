@@ -89,8 +89,6 @@ Now that we have seen how data constructor applications are parameterized by
 locations, let us look at a more complex example than those of the prior section.
 Consider \lstinline[mathescape]{buildtree}, which constructs the same trees consumed by \lstinline[mathescape]{sum}
 and \lstinline[mathescape]{rightmost} above.  First, in the source language without locations:
-\rn{Some redundancy here w sec 3.1.. if needed could throw outsome of it and move this
-  example down there, or remove it entirely.}
 
 %% \floatstyle{plain}\restylefloat{figure}
 %% \begin{figure}
@@ -772,8 +770,8 @@ trees stored in previous fields.
 A feature of \ourcalc{} is the flexibility it provides to pick the
 serialization layout.
 %
-Our formalism uses our \emph{end-witness rule} to abstract from
-different layout decisions.
+Our formalism uses our \emph{end-witness rule} to abstract from different layout
+decisions (for a more thorough explanation, see \secref{subsec:typesafety}).
 %
 Given a type $\TYP$, a starting address
 $\concreteloc{\reg}{\ind_{s}}{}$, and store $\STOR$, the rule below
@@ -858,7 +856,7 @@ has a store that is well formed, as described in \Secref{sec:well-formedness}.
 %
 The program can start taking evaluation steps from this configuration.
 
-\subsection{Example: Allocating a Binary Tree.}
+\subsection{Example} %: Allocating a Binary Tree.}
 \label{sec:dynsem-example}
 %
 Consider this code snippet of \ourcalc{}.
@@ -915,95 +913,12 @@ witness of the second field is the end witness of the entire
 constructor, as is the case here.
 
 \subsection{Type Safety}
+\label{subsec:typesafety}
 
-\fixme{The key to proving type safety is our store-typing rule will be written here!}
-%
-\begin{displaymath}
-  \storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}
-\end{displaymath}
-%
-The store typing specifies three categories of invariants.
-%
-The first enforces that allocations occur in the sequence
-specified by the constraint environment $\CENV$.
-%
-In particular, if there is some location $\loc$ in the domain of
-$\CENV$, then the location map and store have the expected
-allocations at the expected types.
-%
-For instance, if $(\loc \mapsto
-\afterl{\tyatlocreg{\TYP}{\loc'}{\reg}}) \in \CENV$, then $\loc'$ maps
-to $\concreteloc{\reg}{\ind_1}{}$ and $\loc$ to
-$\concreteloc{\reg}{\ind_2}{}$ in the location map, and $\ind_2$ is
-the end witness of $\ind_1$ at type $\TYP$ in the store, at region
-$\reg$.
-%
-The second category enforces that, for each symbolic location such
-that $(\loc \mapsto \TYP) \in \SENV$, there is some
-$\concreteloc{\reg}{\ind_1}{}$ for $\loc$ in the location map and
-$\ind_1$ has some end witness $\ind_2$ at type $\TYP$.
-%
-The final category enforces that each address in the store is written
-once.
-%
-This property is asserted by insisting that, if $\loc \in \NENV$, then
-there is some $\concreteloc{\reg}{\ind}{}$ for $\loc$ in the location
-map, but there is no write to for $\ind$ at $\reg$ in the store.
-%
-To support this property, there are two additional conditions which
-require that the most recently allocated location (tracked by
-to $\AENV, \NENV$) is at the end of its respective region.
-
-To support this behavior, there are two additional conditions in this
-category that enforce linearity of allocation.
-%
-The first one captures the situation when there is an allocation in
-flight, such as is the case in the postcondition of allocating
-a tag (and the corresponding binding the cell to $\loc$).
-%
-In this case, the typing rule specifies that $(\reg \mapsto \loc) \in
-A$ and $\loc \in \NENV$.
-%
-The requirement is that the address bound to $\loc$ is the maximum
-position in the location map for the region $\reg$ and that this
-position is past the end of any address already written in the store
-at $\reg$.
-The second condition captures the other situation, just after
-a field has been allocated and finalized, which is occurs
-when $(\reg \mapsto \loc) \in A$ and $(\loc \mapsto \TYP) \in \SENV$
-for the location $\loc$ representing the field.
-%
-In this case, the condition requires that the address of the end
-witness of the field is the maximum of all other addresses in the
-store at region $\reg$.
-
-The type safety of \ourcalc{} follows from the following result.
-
-\begin{theorem}[Type safety]
-  \label{theorem:type-safety}
-\begin{displaymath}
-  \begin{aligned}
-  \text{If} \;\; & (\emptyset;\SENV;\CENV;\AENV;\NENV \vdash \AENV';\NENV';\EXPR : \hTYP) \wedge
-                   (\storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}) \\
-  \text{and} \;\; & \STOR;\MENV;\EXPR \stepsto^n \STOR';\MENV';\EXPR' \\
-  \text{then} \;\; & (\EXPR' \; \mathit{value}) \vee
-                     (\exists \STOR'', \MENV'', \EXPR'' . \; \STOR';\MENV';\EXPR' \stepsto \STOR'';\MENV'';\EXPR'')
-  \end{aligned}
-  \end{displaymath}
-\end{theorem}
-
-\begin{nproof}
-  The type safety follows from an induction with
-  the progress and preservation lemmas \fixme{which will be explained below}
-\end{nproof}
-
-\mav{Copy over some of the high level ideas from the appendix, and maybe remove
-  the appendix entirely, since it was already published in a tech report.}
+\input{proof}
 
 \section{Extensions}\label{sec:extensions}
 
-\mav{Talk about extensions I made to LoCal, like offsets and indirections.}
-\mav{Add other junk here that doesn't fit in other sections.}
 
 \subsection{Offsets and Indirections}\label{subsec:indirections}
 
@@ -1094,10 +1009,12 @@ representation and control flow ``bottom out'' to sequential pieces of work.
 That is, granularity-control in the data mirrors traditional granularity-control
 in parallel task scheduling.
 
-I worked with the rest of the Gibbon compiler team to implement this strategy
+We implemented this in the Gibbon compiler
 and found that it performed as well or better than parallel GHC and parallel
 MLton on a variety of benchmarks. When utilizing 18 cores, our geomean speedup
 is $1.87\times$ and $3.16\times$ over parallel MLton and GHC, respectively.
+A more thorough evaluation of the performance of parallel \ourcalc{} is
+in~\secref{subsec:parallelbench}.
 
 There are several opportunities for parallelism in \ourcalc{} programs.
 %

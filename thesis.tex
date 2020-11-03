@@ -26,6 +26,8 @@
 \usepackage[thmmarks,thref,amsmath]{ntheorem}
 \usepackage[noabbrev]{cleveref}
 
+\setcounter{secnumdepth}{3}
+
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{lemma}[theorem]{Lemma}
 
@@ -204,11 +206,11 @@ This abstract page is required. Make sure to adhere to the word count and other 
 % \appendix command is necessary to change chapter numbering.
 % Appendices are optional
 
-\appendix
+% \appendix
 
 
 
-\chapter{Formalization and Type Safety Proof}\label{appendix:proof}
+\chapter{Type Safety Proof}\label{appendix:proof}
 
 \input{appendix}
 

@@ -1,0 +1,451 @@
+\mv{Overview of type safety of LoCal and why we should care.}
+% Full type safety proof is give in the appendix of \cite{local-extended}.
+
+\subsubsection{Variables and substitution}
+I use the convention that all variables for binding values,
+locations, and regions are distinct, and maintain this invariant
+implicitly.
+%
+The bindings sites of variables are summarized by the following:
+%
+\begin{itemize}
+\item Variables for binding values $\var$ are bound by function definitions
+$\FD$ and pattern matches $\pat$.
+
+\item Location variables $\locreg{\loc}{\reg}$ are bound by type schemes $\TS$, pattern matches
+$\pat$, and $\keywd{letloc}$ binders.
+
+\item Region variables $\reg$ are bound by type schemes $\TS$, pattern
+matches $\pat$, and $\keywd{letregion}$ binders.
+\end{itemize}
+%
+The use sites of variables are summarized by the following:
+\begin{itemize}
+\item Variables for binding varlues $\var$ are used by values $\VAL$.
+
+\item Location variables $\locreg{\loc}{\reg}$ are used by concrete locations $\concreteloc{\reg}{\ind}{\locreg{\loc}{\reg}}$,
+the argument list of function applications
+$\fapp{\overharpoon{\locreg{l}{r}}}{\overharpoon{\VAL}}$, the location
+argument of constructor applications
+$\datacon{\DC}{\keywd{\locreg{\loc}{\reg}}}{\overharpoon{\VAL}}$,
+located types $\hTYP$, and located expressions $\LE$.
+
+\item Region varaibles $\reg$ are used in the same places as location variables.
+\end{itemize}
+%
+We use the following conventions for variable substitution:
+%
+\begin{itemize}
+\item $\subst{\EXPR}{x}{v}$: Substitute $v$ for $x$ in $e$. We let the notation extend to vectors such that
+$\subst{\EXPR}{\overharpoon{x}}{\overharpoon{v}}$ denotes the iterated substitution $\subst{\EXPR}{\overharpoon{x_1}}{\overharpoon{v_1}} \ldots \subst{}{\overharpoon{x_n}}{\overharpoon{v_n}}$, where $n = |\overharpoon{x}| = |\overharpoon{v}|$.
+
+\item $\subst{\EXPR}{\locreg{\loc_1}{\reg_1}}{\locreg{\loc_2}{\reg_2}}$: Substitute location variable $\locreg{\loc_2}{\reg_2}$ for $\locreg{\loc_1}{\reg_1}$ in $\EXPR$. We extend this notation to vectors of locations in the same fashion, as described above.
+
+\item $\subst{\EXPR}{\reg_1}{\reg_2}$ : Substitute region variable $\reg_2$ for $\reg_1$ in $\EXPR$. We extend this notation to vectors of locations in the same fashion, as described above.
+
+\item Finally, we extend the aforementioned notation so that
+  substitution can act on environments $\CENV$, $\AENV$, and $\NENV$,
+  e.g.,
+  $\subst{\CENV}{\locreg{\loc_1}{\reg_1}}{\locreg{\loc_2}{\reg_2}}$.
+\end{itemize}
+
+% \subsubsection{Global environment and metafunctions}
+% \begin{itemize}
+% \item $Function(f)$: An environment that maps a function $f$ to its definition $\FD$.
+
+% \item $Freshen(\FD)$: A metafunction that freshens all bound variables in function definition
+% $\FD$ and returns the resulting function definition.
+
+% \item $TypeOfCon(\DC):$ An environment that maps a data constructor to its type.
+
+% \item $TypeOfField(\DC,i)$: A metafunction that returns the type of the \il{i}'th field
+% of data constructor $\DC$.
+
+% \item $ArgTysOfConstructor(\DC)$: An environment that maps a data constructor to its field types.
+
+% \item $\allocptr{\reg}{\STOR}$: $\max \set{-1} \cup \set{ \indj \; | \; {(\reg \mapsto (\indj \mapsto \DC)) \in \STOR}}$.
+% \end{itemize}
+
+
+\subsubsection{Store typing}
+\label{sec:well-formedness}
+A key part of the safety of \ourcalc{} programs is the following property: if a
+term $e$ is type $\tyatlocreg{\TYP}{\loc}{\reg}$, then if we look in the store
+under region $\reg$ at the location represented by $\loc$, we will find the
+start of a serialized data structure which is a valid serialization of a value
+of type $\TYP$. In other words, the types tell us the truth about the values in
+the store.
+%
+To achieve this, we rely on the store being \emph{well-formed}, whose definition
+itself uses three other judgements (shown in Table~\ref{tbl:swf-judgements}).
+%
+% \begin{displaymath}
+%   \storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}
+% \end{displaymath}
+
+\begin{table}
+\bgroup
+% \def\arraystretch{1.2}
+% \setlength\tabcolsep{0.5cm}
+\begin{tabular}{llp{8cm}}
+ & \textbf{Judgement form} & \textbf{Summary}
+ \\\\
+\parbox[t]{3.5cm}{Store \\ well formedness} & $\storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}$ &
+
+The store $\STOR$ along with location map $\MENV$ are well formed with respect to
+typing environments $\SENV$, $\CENV$, and $\AENV$.
+\\\\
+End witness & $\ewitness{\TYP}{\concreteloc{\reg}{\ind_{s}}{}}{\STOR}{\concreteloc{\reg}{\ind_{e}}{}}$ &
+
+The store address $\concreteloc{\reg}{\ind_{e}}{}$ is the position one
+after the last cell of the tree of type $\TYP$ starting at
+$\concreteloc{\reg}{\ind_{s}}{}$ in store $\STOR$.
+\\\\
+\parbox[t]{3.5cm}{Constructor-application \\ well formedness}
+ & $\storewfcfa{\CENV}{\MENV}{\STOR}$ &
+
+All in-flight data-constructor applications in store $\STOR$ along with location map $\MENV$
+are well formed with respect to constructor-progress typing environment $\CENV$.
+\\\\
+\parbox[t]{3.5cm}{Allocation \\ well formedness} & $\storewfca{\AENV}{\NENV}{\MENV}{\STOR}$ &
+
+Allocation in store $\STOR$ along with location map $\MENV$ is well formed
+with respect to allocation-typing environments $\AENV$ and $\NENV$.
+\end{tabular}
+\egroup
+\caption{Summary of judgements used to establish well formedness of the store.}
+\label{tbl:swf-judgements}
+\end{table}
+
+
+% The store typing specifies three categories of invariants.
+% %
+% \begin{enumerate}
+% \item The first enforces that allocations occur in the sequence
+% specified by the constraint environment $\CENV$.
+% %
+% In particular, if there is some location $\loc$ in the domain of
+% $\CENV$, then the location map and store have the expected
+% allocations at the expected types.
+% %
+% For instance, if $(\loc \mapsto
+% \afterl{\tyatlocreg{\TYP}{\loc'}{\reg}}) \in \CENV$, then $\loc'$ maps
+% to $\concreteloc{\reg}{\ind_1}{}$ and $\loc$ to
+% $\concreteloc{\reg}{\ind_2}{}$ in the location map, and $\ind_2$ is
+% the end witness of $\ind_1$ at type $\TYP$ in the store, at region
+% $\reg$.
+% %
+% \item The second category enforces that, for each symbolic location such
+% that $(\loc \mapsto \TYP) \in \SENV$, there is some
+% $\concreteloc{\reg}{\ind_1}{}$ for $\loc$ in the location map and
+% $\ind_1$ has some end witness $\ind_2$ at type $\TYP$.
+% %
+% \item The final category enforces that each address in the store is written
+% once.
+% %
+% This property is asserted by insisting that, if $\loc \in \NENV$, then
+% there is some $\concreteloc{\reg}{\ind}{}$ for $\loc$ in the location
+% map, but there is no write to for $\ind$ at $\reg$ in the store.
+% %
+% To support this property, there are two additional conditions which
+% require that the most recently allocated location (tracked by
+% to $\AENV, \NENV$) is at the end of its respective region.
+% \end{enumerate}
+
+% To support this behavior, there are two additional conditions in this
+% category that enforce linearity of allocation.
+% %
+% The first one captures the situation when there is an allocation in
+% flight, such as is the case in the postcondition of allocating
+% a tag (and the corresponding binding the cell to $\loc$).
+% %
+% In this case, the typing rule specifies that $(\reg \mapsto \loc) \in
+% A$ and $\loc \in \NENV$.
+% %
+% The requirement is that the address bound to $\loc$ is the maximum
+% position in the location map for the region $\reg$ and that this
+% position is past the end of any address already written in the store
+% at $\reg$.
+% The second condition captures the other situation, just after
+% a field has been allocated and finalized, which is occurs
+% when $(\reg \mapsto \loc) \in A$ and $(\loc \mapsto \TYP) \in \SENV$
+% for the location $\loc$ representing the field.
+% %
+% In this case, the condition requires that the address of the end
+% witness of the field is the maximum of all other addresses in the
+% store at region $\reg$.
+
+
+
+\paragraph{Notation for references to well-formedness judgements}
+Because there are many requirements specified inside the various
+well-formedness judgements, we introduce notation for referring
+to requirements individually.
+%
+For example, the notation
+\refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc2}
+refers to the judgement
+\begin{align*}
+\storewfca{\AENV}{\NENV}{\MENV}{\STOR},
+\end{align*}
+specified in Section~\ref{sec:well-formedness-allocation},
+and in that judgement, rule number~\ref{wf:impl-linear-alloc2}.
+
+The definition of store well formedness follows.
+
+\paragraph{Judgement form}
+
+$\storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}$
+
+The well-formedness judgement specifies the valid layouts of the store by using the location
+map and the various environments from the typing judgement.
+%
+Rule~\ref{wf:map-store-consistency} specifies that, for each location in the store-typing environment,
+there is a corresponding concrete location in the location map and that concrete location satisfies
+a corresponding end-witness judgement.
+%
+Rules~\ref{wf:cfc} and~\ref{wf:ca} reference the judgements for well formedness concerning
+in-flight constructor applications (\secref{sec:end-witness}) and correct allocation in
+regions (\secref{sec:well-formedness-allocation}), respectively.
+%
+Finally, Rule~\ref{wf:impl1} specifies that the nursery and store-typing environments reference
+no common locations, which is a way of reflecting that each location is either in the process
+of being constructed and in the nursery, or allocated and in the store-typing environment, but
+never both.
+
+\paragraph{Definition}
+
+\begin{enumerate}
+
+    \item \label{wf:map-store-consistency} $ (\locreg{\loc}{\reg} \mapsto \TYP) \in \SENV \Rightarrow \\
+            ((\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind_1}{}) \in \MENV \wedge \\
+            \ewitness{\TYP}{\concreteloc{\reg}{\ind_1}{}}{\STOR}{\concreteloc{\reg}{\ind_2}{}})
+          $
+
+    \item \label{wf:cfc} $\storewfcfa{\CENV}{\MENV}{\STOR}$
+
+    \item \label{wf:ca} $\storewfca{\AENV}{\NENV}{\MENV}{\STOR}$
+
+    \item \label{wf:impl1} $dom(\SENV) \cap \NENV = \emptyset $
+\end{enumerate}
+
+
+\subsubsection{End-Witness judgement}
+\label{sec:end-witness}
+
+\paragraph{Judgement form}
+
+$\ewitness{\TYP}{\concreteloc{\reg}{\ind_{s}}{}}{\STOR}{\concreteloc{\reg}{\ind_{e}}{}}$
+
+The end-witness judgement specifies the expected layout in the store of a fully
+allocated data constructor.
+%
+Rule~\ref{ewitness:impl1} requires that the first cell store a constructor
+tag of the appropriate type.
+%
+Rule~\ref{ewitness:impl2} specifies the address of the cell one past the tag.
+%
+Rule~\ref{ewitness:impl3} recursively specifies the positions of the constructor
+fields.
+%
+Finally, Rule~\ref{ewitness:impl4} specifies that the end witness of
+the overall constructor is the address one past the end of either the
+tag, if the constructor has zero fields, or the final field,
+otherwise.
+
+\paragraph{Definition}
+
+\begin{enumerate}
+\item \label{ewitness:impl1} $\STOR(\reg)(\ind_s) = \DC'$ \; \text{such that} \\
+      $\; \DATA\;\TYP = \overharpoon{\DC_1 \; \overharpoon{\sTYP}_1\;} \; | \; \ldots \; | \; \DC' \; \overharpoon{\sTYP}' \; | \; \ldots \; | \; \overharpoon{\DC_m \; \overharpoon{\sTYP}_m\;}$
+
+\item \label{ewitness:impl4} $\overharpoon{w_0} = \ind_s + 1$
+
+\item \label{ewitness:impl2}
+  $\ewitness{\overharpoon{\TYP'_1}}{\concreteloc{\reg}{\overharpoon{w_0}}{}}{\STOR}{\concreteloc{\reg}{\overharpoon{w_1}}{}} \wedge$ \\
+  $\ewitness{\overharpoon{\TYP'_{j+1}}}{\concreteloc{\reg}{\overharpoon{w_j}}{}}{\STOR}{\concreteloc{\reg}{\overharpoon{w_{j+1}}}{}}$
+  \\ where $\indj \in \set{1,\ldots,n-1} ; n = | \overharpoon{\TYP'} |$
+
+\item \label{ewitness:impl3}
+  $\ind_e = \overharpoon{w_n}$
+\end{enumerate}
+
+\subsubsection{Well-formedness of constructor application}
+\label{sec:well-formedness-constructors}
+
+\paragraph{Judgement form}
+
+$\storewfcfa{\CENV}{\MENV}{\STOR}$
+
+The well-formedness judgement for constructor application specifies the various constraints
+that are necessary for ensuring correct formation of constructors, dealing with constructor
+application being an incremental process that spans multiple \ourcalc{} instructions.
+%
+Rule~\ref{wfconstr:constraint-start} specifies that, if a location corresponding to the
+first address in a region is in the constraint environment, then there is a corresponding
+entry for that location in the location map.
+%
+Rule~\ref{wfconstr:constraint-tag} specifies that, if a location corresponding to the address one past a constructor
+tag is in the constraint environment, then there are corresponding locations for the address
+of the tag and the address after in the location map.
+%
+Rule~\ref{wfconstr:constraint-after} specifies that, if a location corresponding to the address
+one past after a fully allocated constructor application is in the constraint environment,
+then there are corresponding locations for the address one past the constructor application
+and for the address of the start of that constructor application in the location map, as well as the existence
+of an end witness for that fully allocated location.
+
+\paragraph{Definition}
+
+\begin{enumerate}
+    \item \label{wfconstr:constraint-start} $ (\locreg{\loc}{\reg} \mapsto \startr{\reg}) \in \CENV \Rightarrow \\
+            (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{0}{}) \in \MENV $
+
+    \item \label{wfconstr:constraint-tag} $ (\locreg{\loc}{\reg} \mapsto (\locreg{\loc'}{\reg} + 1)) \in \CENV \Rightarrow
+            \\
+            (\locreg{\loc'}{\reg} \mapsto \concreteloc{\reg}{\ind_l}{})  \in \MENV \wedge \\
+            (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind_l + 1}{})  \in \MENV
+            $
+
+    \item \label{wfconstr:constraint-after} $ (\locreg{\loc}{\reg} \mapsto \afterl{\tyatlocreg{\TYP}{\locreg{\loc'}{\reg}}{\reg}}) \in \CENV \Rightarrow \\
+            ((\locreg{\loc'}{\reg} \mapsto \concreteloc{\reg}{\ind_1}{}) \in \MENV \wedge \\
+            \ewitness{\TYP}{\concreteloc{\reg}{\ind_1}{}}{\STOR}{\concreteloc{\reg}{\ind_2}{}} \wedge \\
+            (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind_2}{}) \in \MENV)
+            $
+
+\end{enumerate}
+
+
+\subsubsection{Well-formedness concerning allocation}
+\label{sec:well-formedness-allocation}
+
+\paragraph{Judgement form}
+
+$\storewfca{\AENV}{\NENV}{\MENV}{\STOR}$
+
+The well-formedness judgement for safe allocation specifies the various properties
+of the location map and store that enable continued safe allocation, avoiding in particular
+overwriting cells, which could, if possible, invalidate overall type safety.
+%
+Rule~\ref{wf:impl-linear-alloc} requires that, if a location is in both the allocation
+and nursery environments, i.e., that address represents an in-flight
+constructor application, then there is a corresponding location in the location
+map and the address of that location is the highest address in the store.
+%
+Rule~\ref{wf:impl-linear-alloc2} requires that, if there is an address in the allocation
+environment and that address is fully allocated, then the address of that location is the
+highest address in the store.
+%
+Rule~\ref{wf:impl-write-once} requires that, if there is an address in the nursery, then
+there is a corresponding location in the location map, but nothing at the corresponding
+address in the store.
+%
+Finally, Rule~\ref{wf:impl-empty-region} requires that, if there is a region that has been
+created but for which nothing has yet been allocated, then there can be no addresses
+for that region in the store.
+
+\paragraph{Definition}
+
+\begin{enumerate}
+    \item \label{wf:impl-linear-alloc} $ ((\reg \mapsto \locreg{\loc}{\reg}) \in \AENV \wedge \locreg{\loc}{\reg} \in \NENV) \Rightarrow \\
+          ((\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind}{}) \in \MENV \wedge
+%          \ind = \max \set{0} \cup \set{\indj \; | \; \concreteloc{\reg}{\indj}{} \in \MENV} \wedge \\
+          \ind > \allocptr{\reg}{\STOR})
+          $
+
+    \item \label{wf:impl-linear-alloc2} $ ((\reg \mapsto \locreg{\loc}{\reg}) \in \AENV \wedge
+    \, (\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind_s}{}) \in \MENV \wedge \locreg{\loc}{\reg} \not \in \NENV \wedge
+    \, \ewitness{\TYP}{\concreteloc{\reg}{\ind_s}{}}{\STOR}{\concreteloc{\reg}{\ind_e}{}}) \Rightarrow \\
+          \ind_e > \allocptr{\reg}{\STOR}
+          $
+
+    \item \label{wf:impl-write-once} $ \locreg{\loc}{\reg} \in \NENV \Rightarrow \\
+          ((\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind}{}) \in \MENV \wedge \\
+          (\reg \mapsto (\ind \mapsto \DC)) \not \in \STOR)
+          $
+
+    \item \label{wf:impl-empty-region} $(\reg \mapsto \emptyset) \in \AENV \Rightarrow \\
+    \reg \not \in dom(\STOR)$
+\end{enumerate}
+
+
+
+\subsubsection{Type safety theorem}
+
+\newcommand{\substlemmasubsts}[1]{\subst{#1}{\overharpoon{\var}}{\overharpoon{\VAL}} \subst{}{\overharpoon{\locreg{\loc}{\reg}}}{\overharpoon{\locreg{\loc'}{\reg'}}} \subst{}{\locreg{\loc}{\reg}}{\locreg{\loc'}{\reg'}}}
+
+
+% \begin{lemma}[Substitution lemma]
+%   \label{lemma:substitution}
+%   \begin{align*}
+%   \text{If} \quad & \TENV \cup \set{\overharpoon{\var_1} \mapsto \overharpoon{\TYP_1} \ensuremath{@} \overharpoon{\locreg{\loc_1}{\reg_1}}, \ldots, \overharpoon{\var_n} \mapsto  \overharpoon{\TYP_n} \ensuremath{@} \overharpoon{\locreg{\loc_n}{\reg_n}}}; \SENV; \CENV; \AENV; \NENV \vdash \AENV'; \NENV'; \EXPR : \tyatlocreg{\TYP}{\loc}{\reg}\\
+%   \text{and} \quad & \TENV; \SENV'; \CENV'; \AENV'; \NENV' \vdash \AENV'; \NENV'; \overharpoon{\VAL_i} : \overharpoon{\TYP_i} \ensuremath{@} \overharpoon{\locreg{\loc'_i}{\reg'_i}} \qquad \; i \in \set{1, \ldots, n}\\
+%   \text{then} \quad & \TENV; \SENV'; \CENV'; \AENV'; \NENV' \vdash \AENV'''; \NENV'''; \substlemmasubsts{\EXPR} : \tyatlocreg{\TYP}{\loc'}{\reg'}\\
+%    \text{where} \quad & \SENV = \SENV_0 \cup \set{\overharpoon{\locreg{\loc_1}{\reg_1}} \mapsto \overharpoon{\TYP_1}, \ldots, \overharpoon{\locreg{\loc_n}{\reg_n}} \mapsto \overharpoon{\TYP_n}}\\
+%    \text{and} \quad & \forall_{(\var \mapsto \TYP'' \ensuremath{@} \locreg{\loc''}{\reg''}) \in \TENV} . (\locreg{\loc''}{\reg''} \mapsto \TYP'') \in \SENV_0 \\
+%   \text{and} \quad & dom(\SENV) \cap \NENV = \emptyset\\
+%   \text{and} \quad & \NENV = \NENV_0 \cup \locreg{\loc}{\reg}\\
+%   \text{and} \quad & \SENV' = \SENV \cup \set{\overharpoon{\locreg{\loc'_1}{\reg'_1}} \mapsto \overharpoon{\TYP_1}, \ldots, \overharpoon{\locreg{\loc'_n}{\reg'_n}} \mapsto \overharpoon{\TYP_n}}\\
+%   \text{and} \quad & \CENV' = \subst{\CENV}{\overharpoon{\locreg{\loc}{\reg}}}{\overharpoon{\locreg{\loc'}{\reg'}}} \subst{}{\locreg{\loc}{\reg}}{\locreg{\loc'}{\reg'}} \\
+%   \text{and} \quad & \AENV' = \subst{\AENV}{\overharpoon{\locreg{\loc}{\reg}}}{\overharpoon{\locreg{\loc'}{\reg'}}} \subst{}{\locreg{\loc}{\reg}}{\locreg{\loc'}{\reg'}} \subst{}{\reg}{\reg'}\\
+%   \text{and} \quad & \NENV' = \subst{\NENV}{\locreg{\loc}{\reg}}{\locreg{\loc'}{\reg'}}
+%   \end{align*}
+% \end{lemma}
+% \begin{nproof}
+% The proof is by rule induction on the given typing derivation.
+% \end{nproof}
+
+\begin{lemma}[Progress]
+  \label{lemma:progress}
+  \begin{displaymath}
+  \begin{aligned}
+  \text{if} \;\; & \emptyset;\SENV;\CENV;\AENV;\NENV \vdash \AENV';\NENV';\EXPR : \hTYP \\
+  \text{and} \;\; & \storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR} \\
+  \text{then} \;\; & \EXPR \; \mathit{value} \\
+  \text{else} \;\; & \STOR;\MENV;\EXPR \stepsto \STOR';\MENV';\EXPR'
+  \end{aligned}
+  \end{displaymath}
+\end{lemma}
+\begin{nproof}
+The proof is by rule induction on the given typing derivation.
+\end{nproof}
+
+\begin{lemma}[Preservation]
+  \label{lemma:preservation}
+  \begin{displaymath}
+    \begin{aligned}
+      \text{If} \;\; & \emptytenv;\SENV;\CENV;\AENV;\NENV \vdash \AENV';\NENV';\EXPR : \hTYP \\
+      \text{and} \;\; & \storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}\\
+      \text{and} \;\; & \STOR;\MENV;\EXPR \stepsto \STOR';\MENV';\EXPR' \\
+      \text{then for some} \;\; & \SENV' \supseteq \SENV, \CENV' \supseteq \CENV ,\\
+      & \emptytenv;\SENV';\CENV';\AENV';\NENV' \vdash \AENV'';\NENV'';\EXPR' : \hTYP \\
+      \text{and} \;\; & \storewf{\SENV'}{\CENV'}{\AENV'}{\NENV'}{\MENV'}{\STOR'}\\
+    \end{aligned}
+  \end{displaymath}
+\end{lemma}
+\begin{nproof}
+The proof is by rule induction on the given derivation of the dynamic semantics.
+\end{nproof}
+
+
+The type safety of \ourcalc{} follows from the following result.
+
+\begin{theorem}[Type safety]
+  \label{theorem:type-safety}
+\begin{displaymath}
+  \begin{aligned}
+  \text{If} \;\; & (\emptyset;\SENV;\CENV;\AENV;\NENV \vdash \AENV';\NENV';\EXPR : \hTYP) \wedge
+                   (\storewf{\SENV}{\CENV}{\AENV}{\NENV}{\MENV}{\STOR}) \\
+  \text{and} \;\; & \STOR;\MENV;\EXPR \stepsto^n \STOR';\MENV';\EXPR' \\
+  \text{then} \;\; & (\EXPR' \; \mathit{value}) \vee
+                     (\exists \STOR'', \MENV'', \EXPR'' . \; \STOR';\MENV';\EXPR' \stepsto \STOR'';\MENV'';\EXPR'')
+  \end{aligned}
+  \end{displaymath}
+\end{theorem}
+
+\begin{nproof}
+  The type safety follows from an induction with
+  the progress and preservation lemmas.
+\end{nproof}
+
+\mv{Show some cases of the proof as examples!}
