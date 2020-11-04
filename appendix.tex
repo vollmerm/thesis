@@ -1,51 +1,66 @@
-% \section{Variables and Substitution}
-% %
-% We use the convention that all variables for binding values,
-% locations, and regions are distinct, and maintain this invariant
-% implicitly.
-% %
-% The bindings sites of variables are summarized by the following:
-% %
-% \begin{itemize}
-% \item Variables for binding values $\var$ are bound by function definitions
-% $\FD$ and pattern matches $\pat$.
+\paragraph{Notation for references to well-formedness judgements}
+Because there are many requirements specified inside the various
+well-formedness judgements, I will introduce notation for referring
+to requirements individually.
+%
+For example, the notation
+\refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc2}
+refers to the judgement
+\begin{align*}
+\storewfca{\AENV}{\NENV}{\MENV}{\STOR},
+\end{align*}
+specified in Section~\ref{sec:well-formedness-allocation},
+and in that judgement, rule number~\ref{wf:impl-linear-alloc2}.
 
-% \item Location variables $\locreg{\loc}{\reg}$ are bound by type schemes $\TS$, pattern matches
-% $\pat$, and $\keywd{letloc}$ binders.
 
-% \item Region variables $\reg$ are bound by type schemes $\TS$, pattern
-% matches $\pat$, and $\keywd{letregion}$ binders.
-% \end{itemize}
-% %
-% The use sites of variables are summarized by the following:
-% \begin{itemize}
-% \item Variables for binding varlues $\var$ are used by values $\VAL$.
+\paragraph{Variables and Substitution}
+%
+I use the convention that all variables for binding values,
+locations, and regions are distinct, and maintain this invariant
+implicitly.
+%
+The bindings sites of variables are summarized by the following:
+%
+\begin{itemize}
+\item Variables for binding values $\var$ are bound by function definitions
+$\FD$ and pattern matches $\pat$.
 
-% \item Location variables $\locreg{\loc}{\reg}$ are used by concrete locations $\concreteloc{\reg}{\ind}{\locreg{\loc}{\reg}}$,
-% the argument list of function applications
-% $\fapp{\overharpoon{\locreg{l}{r}}}{\overharpoon{\VAL}}$, the location
-% argument of constructor applications
-% $\datacon{\DC}{\keywd{\locreg{\loc}{\reg}}}{\overharpoon{\VAL}}$,
-% located types $\hTYP$, and located expressions $\LE$.
+\item Location variables $\locreg{\loc}{\reg}$ are bound by type schemes $\TS$, pattern matches
+$\pat$, and $\keywd{letloc}$ binders.
 
-% \item Region varaibles $\reg$ are used in the same places as location variables.
-% \end{itemize}
-% %
-% We use the following conventions for variable substitution:
-% %
-% \begin{itemize}
-% \item $\subst{\EXPR}{x}{v}$: Substitute $v$ for $x$ in $e$. We let the notation extend to vectors such that
-% $\subst{\EXPR}{\overharpoon{x}}{\overharpoon{v}}$ denotes the iterated substitution $\subst{\EXPR}{\overharpoon{x_1}}{\overharpoon{v_1}} \ldots \subst{}{\overharpoon{x_n}}{\overharpoon{v_n}}$, where $n = |\overharpoon{x}| = |\overharpoon{v}|$.
+\item Region variables $\reg$ are bound by type schemes $\TS$, pattern
+matches $\pat$, and $\keywd{letregion}$ binders.
+\end{itemize}
+%
+The use sites of variables are summarized by the following:
+\begin{itemize}
+\item Variables for binding varlues $\var$ are used by values $\VAL$.
 
-% \item $\subst{\EXPR}{\locreg{\loc_1}{\reg_1}}{\locreg{\loc_2}{\reg_2}}$: Substitute location variable $\locreg{\loc_2}{\reg_2}$ for $\locreg{\loc_1}{\reg_1}$ in $\EXPR$. We extend this notation to vectors of locations in the same fashion, as described above.
+\item Location variables $\locreg{\loc}{\reg}$ are used by concrete locations $\concreteloc{\reg}{\ind}{\locreg{\loc}{\reg}}$,
+the argument list of function applications
+$\fapp{\overharpoon{\locreg{l}{r}}}{\overharpoon{\VAL}}$, the location
+argument of constructor applications
+$\datacon{\DC}{\keywd{\locreg{\loc}{\reg}}}{\overharpoon{\VAL}}$,
+located types $\hTYP$, and located expressions $\LE$.
 
-% \item $\subst{\EXPR}{\reg_1}{\reg_2}$ : Substitute region variable $\reg_2$ for $\reg_1$ in $\EXPR$. We extend this notation to vectors of locations in the same fashion, as described above.
+\item Region varaibles $\reg$ are used in the same places as location variables.
+\end{itemize}
+%
+We use the following conventions for variable substitution:
+%
+\begin{itemize}
+\item $\subst{\EXPR}{x}{v}$: Substitute $v$ for $x$ in $e$. We let the notation extend to vectors such that
+$\subst{\EXPR}{\overharpoon{x}}{\overharpoon{v}}$ denotes the iterated substitution $\subst{\EXPR}{\overharpoon{x_1}}{\overharpoon{v_1}} \ldots \subst{}{\overharpoon{x_n}}{\overharpoon{v_n}}$, where $n = |\overharpoon{x}| = |\overharpoon{v}|$.
 
-% \item Finally, we extend the aforementioned notation so that
-%   substitution can act on environments $\CENV$, $\AENV$, and $\NENV$,
-%   e.g.,
-%   $\subst{\CENV}{\locreg{\loc_1}{\reg_1}}{\locreg{\loc_2}{\reg_2}}$.
-% \end{itemize}
+\item $\subst{\EXPR}{\locreg{\loc_1}{\reg_1}}{\locreg{\loc_2}{\reg_2}}$: Substitute location variable $\locreg{\loc_2}{\reg_2}$ for $\locreg{\loc_1}{\reg_1}$ in $\EXPR$. We extend this notation to vectors of locations in the same fashion, as described above.
+
+\item $\subst{\EXPR}{\reg_1}{\reg_2}$ : Substitute region variable $\reg_2$ for $\reg_1$ in $\EXPR$. We extend this notation to vectors of locations in the same fashion, as described above.
+
+\item Finally, we extend the aforementioned notation so that
+  substitution can act on environments $\CENV$, $\AENV$, and $\NENV$,
+  e.g.,
+  $\subst{\CENV}{\locreg{\loc_1}{\reg_1}}{\locreg{\loc_2}{\reg_2}}$.
+\end{itemize}
 
 \paragraph{Metafunctions}
 

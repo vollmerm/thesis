@@ -1,53 +1,11 @@
 \mv{Overview of type safety of LoCal and why we should care.}
 % Full type safety proof is give in the appendix of \cite{local-extended}.
 
-\subsubsection{Variables and substitution}
-I use the convention that all variables for binding values,
-locations, and regions are distinct, and maintain this invariant
-implicitly.
-%
-The bindings sites of variables are summarized by the following:
-%
-\begin{itemize}
-\item Variables for binding values $\var$ are bound by function definitions
-$\FD$ and pattern matches $\pat$.
+\ourcalc{} is a \emph{type safe} language, and I will demonstrate that property
+in this section. Some details of the proof are listed in \secref{appendix:proof},
+such as an overview of notation and the complete cases for the lemmas and theorems.
 
-\item Location variables $\locreg{\loc}{\reg}$ are bound by type schemes $\TS$, pattern matches
-$\pat$, and $\keywd{letloc}$ binders.
 
-\item Region variables $\reg$ are bound by type schemes $\TS$, pattern
-matches $\pat$, and $\keywd{letregion}$ binders.
-\end{itemize}
-%
-The use sites of variables are summarized by the following:
-\begin{itemize}
-\item Variables for binding varlues $\var$ are used by values $\VAL$.
-
-\item Location variables $\locreg{\loc}{\reg}$ are used by concrete locations $\concreteloc{\reg}{\ind}{\locreg{\loc}{\reg}}$,
-the argument list of function applications
-$\fapp{\overharpoon{\locreg{l}{r}}}{\overharpoon{\VAL}}$, the location
-argument of constructor applications
-$\datacon{\DC}{\keywd{\locreg{\loc}{\reg}}}{\overharpoon{\VAL}}$,
-located types $\hTYP$, and located expressions $\LE$.
-
-\item Region varaibles $\reg$ are used in the same places as location variables.
-\end{itemize}
-%
-We use the following conventions for variable substitution:
-%
-\begin{itemize}
-\item $\subst{\EXPR}{x}{v}$: Substitute $v$ for $x$ in $e$. We let the notation extend to vectors such that
-$\subst{\EXPR}{\overharpoon{x}}{\overharpoon{v}}$ denotes the iterated substitution $\subst{\EXPR}{\overharpoon{x_1}}{\overharpoon{v_1}} \ldots \subst{}{\overharpoon{x_n}}{\overharpoon{v_n}}$, where $n = |\overharpoon{x}| = |\overharpoon{v}|$.
-
-\item $\subst{\EXPR}{\locreg{\loc_1}{\reg_1}}{\locreg{\loc_2}{\reg_2}}$: Substitute location variable $\locreg{\loc_2}{\reg_2}$ for $\locreg{\loc_1}{\reg_1}$ in $\EXPR$. We extend this notation to vectors of locations in the same fashion, as described above.
-
-\item $\subst{\EXPR}{\reg_1}{\reg_2}$ : Substitute region variable $\reg_2$ for $\reg_1$ in $\EXPR$. We extend this notation to vectors of locations in the same fashion, as described above.
-
-\item Finally, we extend the aforementioned notation so that
-  substitution can act on environments $\CENV$, $\AENV$, and $\NENV$,
-  e.g.,
-  $\subst{\CENV}{\locreg{\loc_1}{\reg_1}}{\locreg{\loc_2}{\reg_2}}$.
-\end{itemize}
 
 % \subsubsection{Global environment and metafunctions}
 % \begin{itemize}
@@ -177,19 +135,6 @@ with respect to allocation-typing environments $\AENV$ and $\NENV$.
 
 
 
-\paragraph{Notation for references to well-formedness judgements}
-Because there are many requirements specified inside the various
-well-formedness judgements, we introduce notation for referring
-to requirements individually.
-%
-For example, the notation
-\refwellformed{sec:well-formedness-allocation}{wf:impl-linear-alloc2}
-refers to the judgement
-\begin{align*}
-\storewfca{\AENV}{\NENV}{\MENV}{\STOR},
-\end{align*}
-specified in Section~\ref{sec:well-formedness-allocation},
-and in that judgement, rule number~\ref{wf:impl-linear-alloc2}.
 
 The definition of store well formedness follows.
 
@@ -372,6 +317,12 @@ for that region in the store.
 
 \subsubsection{Type safety theorem}
 
+The key to proving type safety is the handling of the store above. After that has been
+established, type safety for \ourcalc{} can be proven in the standard way using
+progress and preservation. The full details of the proof are shown in~\ref{appendix:proof},
+but the statements of the main theorems are written here, as well as a handful
+of representative cases.
+
 \newcommand{\substlemmasubsts}[1]{\subst{#1}{\overharpoon{\var}}{\overharpoon{\VAL}} \subst{}{\overharpoon{\locreg{\loc}{\reg}}}{\overharpoon{\locreg{\loc'}{\reg'}}} \subst{}{\locreg{\loc}{\reg}}{\locreg{\loc'}{\reg'}}}
 
 
@@ -407,7 +358,64 @@ for that region in the store.
   \end{displaymath}
 \end{lemma}
 \begin{nproof}
-The proof is by rule induction on the given typing derivation.
+  The proof is by rule induction on the given typing derivation.
+
+  A representative case to look at in more detail is the \tdatacon{} case.
+
+    Because $\EXPR = \datacon{\DC}{\keywd{\locreg{\loc}{\reg}}}{\overharpoon{\VAL}}$ is not
+    a value, the proof obligation is to show that there is a rule in the dynamic semantics whose
+    left-hand side matches the machine configuration $\STOR;\MENV;\EXPR$.
+    %
+    The only rule that can match is \ddatacon{}, but to establish the
+    match, there remains one obligation, which is obtained
+    by inversion on \ddatacon{}.
+    %
+    The particular obligation is to establish that
+    $\concreteloc{\reg}{\ind}{} = \MENV(\locreg{\loc}{\reg})$,
+    for some $\ind$.
+    %
+    To obtain this result, we need to use the well formedness
+    of the store, given by the premise of this lemma, and in particular rule
+    \refwellformed{sec:well-formedness-allocation}{wf:impl-write-once}.
+    %
+    But a precondition for using
+    \refwellformed{sec:well-formedness-allocation}{wf:impl-write-once} that
+    the location is unwritten, i.e., $\locreg{\loc}{\reg} \in \NENV$.
+    %
+    This precondition is satisfied by inversion on \tdatacon{}.
+    %
+    The application of rule \refwellformed{sec:well-formedness-allocation}{wf:impl-write-once}
+    therefore yields the desired result, thereby discharging this case.
+
+
+    % In this case, where $\EXPR = \datacon{\DC}{\keywd{\locreg{\loc}{\reg}}}{\overharpoon{\VAL}}$,
+    % we know $\datacon{\DC}{\keywd{\locreg{\loc}{\reg}}}{\overharpoon{\VAL}}$
+    % is not a value.
+    % From the premises of the \tdatacon{} rule, we know that
+    % the location $\loc$ is unwritten ($\locreg{\loc}{\reg} \in \NENV$),
+    % and by assumption of the lemma we know the store is well formed, which
+    % means we know $\storewfca{\AENV}{\NENV}{\MENV}{\STOR}$.
+
+    % To prove progress, we need to show that there is a rule in the
+    % dynamic semantics whose left-hand side matches the configuration
+    % $\STOR;\MENV;\datacon{\DC}{\keywd{\locreg{\loc}{\reg}}}{\overharpoon{\VAL}}$.
+    % The only such rule is \ddatacon{}. That rule requires
+    % $\concreteloc{\reg}{\ind}{} = \MENV(\locreg{\loc}{\reg})$,
+    % for some $\ind$, and this can be demonstrated by
+    % Rule~\ref{wf:impl-write-once} of
+    % $\storewfca{\AENV}{\NENV}{\MENV}{\STOR}$, which is
+    % $\locreg{\loc}{\reg} \in \NENV \Rightarrow
+    %       ((\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind}{}) \in \MENV \wedge
+    %       (\reg \mapsto (\ind \mapsto \DC)) \not \in \STOR)$.
+    % Because we have already established that $\locreg{\loc}{\reg} \in \NENV$,
+    % we can conclude $(\locreg{\loc}{\reg} \mapsto \concreteloc{\reg}{\ind}{}) \in \MENV$,
+    % and therefore the requirements for \ddatacon{} are satisfied:
+    % $\STOR;\MENV;\datacon{\DC}{\keywd{\locreg{\loc}{\reg}}}{\overharpoon{\VAL}}$
+    % steps to
+    % $\STOR';\MENV;\concreteloc{\reg}{\ind}{\locreg{\loc}{\reg}}$,
+    % where $\STOR' = \STOR \cup \set{\reg \mapsto (\ind \mapsto \DC)}$ and
+    % $\concreteloc{\reg}{\ind}{} = \MENV(\locreg{\loc}{\reg})$.
+
 \end{nproof}
 
 \begin{lemma}[Preservation]
@@ -424,12 +432,86 @@ The proof is by rule induction on the given typing derivation.
   \end{displaymath}
 \end{lemma}
 \begin{nproof}
-The proof is by rule induction on the given derivation of the dynamic semantics.
+  The proof is by rule induction on the given derivation of the dynamic semantics.
+
+  A representative case to look at in more detail is the \dcase{} case.
+
+  % For this case,
+  % $\EXPR' = \subst{\EXPR}{\overharpoon{\var}}{\concreteloc{\reg}{\overharpoon{w}}{\overharpoon{\locreg{\loc}{\reg}}}}$.
+  % To prove this case, we have to show two things: first, that $\EXPR'$ is
+  % well typed; and second, that the store $\STOR'$ is well formed.
+
+  % For the first part, the goal is to show that
+  % $\emptytenv;\SENV';\CENV;\AENV;\NENV \vdash \AENV; \NENV; \EXPR' : \hTYP$,
+  % where $\hTYP = \tyatlocreg{\TYP}{\loc}{\reg}$.
+  % To demonstrate this, we need to do a few things. First, we have to show that
+  % the body of the pattern match, $\EXPR$, is well typed, so we need to show
+  % $\TENV';\SENV';\CENV;\AENV;\NENV \vdash \AENV;\NENV;\EXPR : \tyatlocreg{\TYP}{\loc}{\reg}$
+  % where
+  % $\TENV' = \set{\overharpoon{\var_1} \mapsto \overharpoon{\TYP_1} \ensuremath{@} \overharpoon{\locreg{\loc_1}{\reg}}, \ldots, \overharpoon{\var_1} \mapsto \overharpoon{\TYP_n} \ensuremath{@} \overharpoon{\locreg{\loc_n}{\reg}}}$
+  % and
+  % $\SENV' = \SENV \cup \set{\overharpoon{\locreg{\loc_1}{\reg}}\mapsto\overharpoon{\TYP}_1,\ldots,\overharpoon{\locreg{\loc_n}{\reg}}\mapsto\overharpoon{\TYP}_n}$.
+  % This can be concluded by inversion on the typing rules \tcase{} and \tpattern{}.
+  % Second, we
+
+    The first of two proof obligations is to show that
+    the result $\EXPR' = \subst{\EXPR}{\overharpoon{\var}}{\concreteloc{\reg}{\overharpoon{w}}{\overharpoon{\locreg{\loc}{\reg}}}}$ of
+    the given step of evaluation is well typed, that is,
+    $\emptytenv;\SENV';\CENV;\AENV;\NENV \vdash \AENV; \NENV; \EXPR' : \hTYP$
+    %
+    where $\hTYP = \tyatlocreg{\TYP}{\loc}{\reg}$.
+    %
+    To establish the above, we start by obtaining the type
+    for the body of the pattern, then the types of the
+    concrete locations being substituted into the body,
+    and finally use these two results
+    with the substitution lemma to discharge the case.
+    %
+    First, by inversion on the typing rules \tcase{} and \tpat{}, we
+    establish that the body of the pattern, namely $\EXPR$, is well typed, i.e.,
+    $\TENV';\SENV';\CENV;\AENV;\NENV \vdash \AENV;\NENV;\EXPR : \tyatlocreg{\TYP}{\loc}{\reg}$,
+    where
+    $
+    \TENV' = \set{\overharpoon{\var_1} \mapsto \overharpoon{\TYP_1} \ensuremath{@} \overharpoon{\locreg{\loc_1}{\reg}}, \ldots, \overharpoon{\var_1} \mapsto \overharpoon{\TYP_n} \ensuremath{@} \overharpoon{\locreg{\loc_n}{\reg}}}$ and
+    $\SENV' = \SENV \cup \set{\overharpoon{\locreg{\loc_1}{\reg}}\mapsto\overharpoon{\TYP}_1,\ldots,\overharpoon{\locreg{\loc_n}{\reg}}\mapsto\overharpoon{\TYP}_n}$.
+    %
+    Second, we establish that the concrete locations being substituted for the
+    pattern variables $\overharpoon{x}$ are well typed.
+    %
+    The specific obligation is, for each $i \in \set{1, \ldots, n}$, to establish that
+    $\emptyset;\SENV';\CENV;\AENV;\NENV \vdash \AENV;\NENV; \concreteloc{\reg}{\overharpoon{w_i}}{\overharpoon{\locreg{\loc_i}{\reg}}} : \overharpoon{\TYP}_i \ensuremath{@} \overharpoon{\locreg{\loc_i}{\reg}}$.
+    %
+    This holds because, by inversion on \tconcreteloc{}, the obligation is
+    to show that, for each such $i$, $(\locreg{\overharpoon{\loc_i}}{\reg} \mapsto \overharpoon{\TYP_i}) \in \SENV'$,
+    which is immediate by inspection on $\SENV'$ above.
+    %
+    Third, and finally, to establish the typing judgement for $\EXPR'$, we use the Substitution
+    Lemma (given and proven in Appendix~\ref{lemma:substitution}), which yields
+    %
+    $\emptyset;\SENV';\CENV;\AENV;\NENV \vdash \AENV;\NENV; \subst{\EXPR}{\overharpoon{\var_1}}{\concreteloc{\reg}{\overharpoon{w_1}}{\overharpoon{\locreg{\loc_1}{\reg}}}}
+    \ldots \subst{}{\overharpoon{\var_n}}{\concreteloc{\reg}{\overharpoon{w_1}}{\overharpoon{\locreg{\loc_n}{\reg}}}}: \hTYP$
+    as needed, thereby discharging this obligation.
+    \item The second obligation
+    for this proof case is, given the affected environments, namely
+    $\SENV'$ and $\MENV'$, to establish the well formedness
+    of the resulting store, i.e.,
+    %
+    $\storewf{\SENV'}{\CENV}{\AENV}{\NENV}{\MENV'}{\STOR}$.
+    I will omit most of the details of this proof obligation because they
+    discharge straightforwardly.
+    %
+    The only part that requires attention is rule
+    \refwellformed{sec:well-formedness}{wf:map-store-consistency},
+    which is affected by the fresh locations in the location
+    environment $\MENV'$.
+    %
+    This requirement discharges by inspection of \dcase{}, thereby
+    discharging this obligation.
+
 \end{nproof}
 
 
-The type safety of \ourcalc{} follows from the following result.
-
+Finally, the type safety theorem follows:
 \begin{theorem}[Type safety]
   \label{theorem:type-safety}
 \begin{displaymath}
@@ -447,5 +529,7 @@ The type safety of \ourcalc{} follows from the following result.
   The type safety follows from an induction with
   the progress and preservation lemmas.
 \end{nproof}
+
+
 
 \mv{Show some cases of the proof as examples!}

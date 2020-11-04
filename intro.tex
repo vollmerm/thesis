@@ -1,4 +1,4 @@
-Many programs running today use heap object representations that are {\em fixed}
+Many programs running today use heap object representations that are \emph{fixed}
 by the language runtime system.
 % , which are not free to vary based on the workload.
 For example, the Java and Haskell runtimes dictate an object layout, and the
@@ -23,12 +23,15 @@ At first glance, the only alternative would seem to be writing low-level code to
 deal directly with specialized or serialized data layouts, an error-prone way to
 achieve performance optimization at the expense of safety and readability.
 
-In my thesis I propose a way to ameliorate both of these concerns: reify {\em
-data layout} as an explicit part of the program. I will introduce a language,
-\ourcalc (which stands for {\em location calculus}), whose type system directly
+In my thesis I propose a way to ameliorate both of these concerns: reify
+\emph{data layout} as an explicit part of the program. In short, I am proposing
+a \emph{language-based} approach to solving the problem of how to safely program
+with serialized data. To that end,
+I present a language,
+\ourcalc{} (which stands for \emph{location calculus}), whose type system directly
 encodes a byte-level layout for algebraic datatypes manipulated by the language.
 %
-A well-typed program consists of functions, data definitions, {\em and}
+A well-typed program consists of functions, data definitions, \emph{and}
 data representation choices, which
 % {Well-typed programs are self-describing with respect to their data-layout},
 % and that layout
@@ -58,13 +61,13 @@ wherever possible.}
 %% \rn{I think we should perhaps make this less LoCal centric since it is more
 %%   HiCal centric once we call it ``Gibbon2''.}
 
-The layout of a \ourcalc data constructor by default takes only one (unaligned)
+The layout of a \ourcalc{} data constructor by default takes only one (unaligned)
 byte in memory and fields may be referred to \emph{either} by pointer
 indirections or unboxed into the parent object (serialized). This allows
 programmers to interpolate between fully serialized and fully pointer-based
 representations.
 %
-\ourcalc can thus serve as a flexible intermediate representation for compilers
+\ourcalc{} can thus serve as a flexible intermediate representation for compilers
 or synthesis tools.
 % , and I will show how it was used as the intermediate language
 % for the Gibbon compiler.
@@ -88,9 +91,9 @@ This thesis will be broken down into three parts. \Cref{chapter:intro} (this
 chapter) gives an overview of \ourcalc, with background, motivation, and related
 work. \Cref{chapter:local} describes the language and presents a formal
 semantics for \ourcalc, as well as some extensions. Finally,
-\Cref{chapter:gibbon} presents the Gibbon compiler, which uses \ourcalc
+\Cref{chapter:gibbon} presents the Gibbon compiler, which uses \ourcalc{}
 internally, and presents an evaluation of Gibbon's performance on various tasks.
-A full proof of type safety for the \ourcalc language is included in \Cref{appendix:proof}.
+A full proof of type safety for the \ourcalc{} language is included in \Cref{appendix:proof}.
 
 
 %% \section{Background}\label{sec:bg}
@@ -159,11 +162,13 @@ holding the integer data, or an interior \il{Node}, consisting of a header word
 and {\em two} double words (on a 64-bit system) holding pointers to its
 children. Depending on the language and runtime system, there is likely additional
 space for storing other information about the object, but this is the basic layout.
-
+%
 For example, a C
 compiler uses 96 bytes
 of memory to represent the tree shown in
-Figure~\ref{fig:intro-tree-unpacked}. On the other hand, if we are
+Figure~\ref{fig:intro-tree-unpacked}.
+
+On the other hand, if we are
 sending the tree over the network, we would naturally use a more
 compact form in serializing it, as shown in
 Figure~\ref{fig:intro-tree-packed}.  In the latter version, we use the
@@ -195,24 +200,24 @@ the internal structure of the tree represents a significant storage overhead.
   \label{fig:intro-fig}
 \end{figure}
 
-
-When relying on the usual pointer-based representation, this data
-%In memory, this data structure can easily be represented using pointers from
-%\il{Node}s to their children, and
-can be readily traversed using standard idioms to perform computations such as summing all the leaf values, as shown in \Figref{fig:haskell_sumtree}.
-
-
-\mav{TODO: include C++ pointer-based sum function}
-
-But when represented on disk or sent over the wire, the same tree structure
-would not preserve pointers from a node to its children. Instead, the tree
-would be {\em serialized}, with the \il{Node}s and \il{Leaf}s of the tree laid
-out in a buffer in some sequential order. For example, the tree could be
-linearized in a left-to-right preorder, containing {\em tags} to mark data
-constructors and atomic fields such as integers, but ditching the pointers.
-Because it contains no pointers, this serialized representation is
-significantly more compact.
-%
+% Though it uses more storage, the usual pointer-based representation is generally easier to manipulate and traverse
+% using standard idioms in high-level programming languages.
+% % The computation shown in \figref{fig:haskell_sumtree} shows
+% % a Haskell function for summing the leaf values in a binary tree, defined by pattern matching and recursion.
+% % In comparison, the C++ code for summing a serialized binary tree, shown in
+% % \figref{fig:cpp-example}, is less clear, relying on side effects and pointer
+% % manipulation.
+% But, as mentioned above, even if a programmer was unconcerned with storage
+% usage, there would still be situations where the pointer-based representation
+% would not be appropriate, such as writing to disk or sending over a network.
+% In those situations, the tree
+% would be {\em serialized}, with the \il{Node}s and \il{Leaf}s of the tree laid
+% out in a buffer in some sequential order. For example, the tree could be
+% linearized in a left-to-right preorder, containing {\em tags} to mark data
+% constructors and atomic fields such as integers, but ditching the pointers.
+% Because it contains no pointers, this serialized representation is
+% significantly more compact.
+% %
 Further, a tree traversal processing this memory representation
 follows a precisely linear memory access pattern, because the data is
 already laid out in a preorder traversal.
@@ -283,46 +288,54 @@ char* add1(char* tin, char* tout) {
 \caption{add1 example}
 \end{figure}
 
-% \mav{TODO: fix up and include add1 tree example here}
 As another example, consider a function that traverses a binary tree as defined
 previously, returns a new binary tree such that each integer has been incremented
 by one. This is again straightforward to describe recursively in a language
-like Haskell. \Figref{fig:add1-haskell}.
+like Haskell, as shown in \Figref{fig:add1-haskell}.
 
 Like before, we can write a C++ function to do this same computation, only
 operating on and returning serialized binary trees. This new function will
 have to accept two arguments (pointers to the input and output byte arrays,
-respectively), and will additionally return a pointer. \Figref{fig:add1-cpp}
+respectively), and will additionally return a pointer. The code is shown in
+\Figref{fig:add1-cpp}. This time around, the procedure is even more
+complicated. Even a single mistake in the pointer arithmetic, such as forgetting
+to increment one of the pointers, would lead to a severe error that would
+be difficult to debug.
 
 
 % \begin{comment}
-There are several advantages to working directly on serialized data: the
-serialized representation can take many times fewer bytes to represent than
-a normal pointer-based representation; data can be traversed faster once in
-memory due to predictable memory accesses; \emph{and} data can be read from
-disk without deserialization (e.g. via \texttt{mmap}).
+% There are several advantages to working directly on serialized data: the
+% serialized representation can take many times fewer bytes to represent than
+% a normal pointer-based representation; data can be traversed faster once in
+% memory due to predictable memory accesses; \emph{and} data can be read from
+% disk without deserialization (e.g. via \texttt{mmap}).
 %
 %% This motivates contemporary efforts to unify internal and
 %% external memory representations like Cap'N Proto~\cite{capnproto}
 %% and GHC CNF~\cite{cnf-icfp15}.
 
-However, working directly with serialized data is not always easy. First,
-programs written with typical pointer-based representations benefit from
-standard techniques, such as type checking, to help programmers avoid errors
-while constructing traversals of their data structures (so, e.g., type
-checking can prevent a programmer from reading an integer value out of an
-interior node of the tree, or from visiting the children of a leaf node). But
-operations on serialized representations provide no such protection: all of the
-data in the tree is packed into a flat buffer that is traversed using cursors.
-Cursors need to be manipulated carefully to visit
-the necessary portions of the buffer---skipping over the sections that are not
-needed---and read out the appropriate data, all without the safety net of a
-type checker. Hence, writing code to work directly on the serialized data can
-be tedious and error-prone.
+Comparing the Haskell procedures operating on traditional trees with the C++
+procedures operating on serialized trees, it is clear that working directly with
+serialized data is not always easy. First, programs written with typical
+pointer-based representations benefit from standard techniques, such as type
+checking, to help programmers avoid errors while constructing traversals of
+their data structures (so, e.g., type checking can prevent a programmer from
+reading an integer value out of an interior node of the tree, or from visiting
+the children of a leaf node). But operations on serialized representations
+provide no such protection: all of the data in the tree is packed into a flat
+buffer that is traversed using cursors. Cursors need to be manipulated carefully
+to visit the necessary portions of the buffer---skipping over the sections that
+are not needed---and read out the appropriate data, all without the safety net
+of a type checker. Hence, writing code to work directly on the serialized data
+can be tedious and error-prone.
 
-Instead, my proposal is to write the above example in a language,
+So, is it possible for programmers to enjoy the benefits of satefy and
+convenience that programmers get when using a high-level language, while also
+programming directly on serialized data?
+%
+My proposal is to write the above examples in a language,
 \emph{\ourcalc}, that is \emph{expressly designed to use dense serializations}
-for its values. The \ourcalc \il{sum} function in \Figref{fig:gibbon_sumtree}
+for its values. The \ourcalc{} \il{sum} function in \Figref{fig:gibbon_sumtree}
 extends the simple functional one above with region and location annotations.
 
 \begin{figure}
@@ -354,6 +367,11 @@ data at $l^r$ and ascertain that represents an intermediate node.
 Conversely, as I will show later, to \emph{construct} data the type system must
 enforce that adjacent fields be serialized consecutively.
 
+I set out to answer the question of whether it is possible to gain the benefits
+of programming with serialization without sacrificing safety, and my assertion
+is that it is, when using a \emph{language-based approach}. \ourcalc{} is that
+language, and the design and implementation of \ourcalc{} is the subject of this
+thesis.
 
 \section{Background and Related Work}\label{sec:bg}
 
@@ -397,6 +415,8 @@ into its own region of the heap
 After compaction, the CNF can be stored externally and loaded
 back into the heap later.
 
+Example of Haskell CNF\figref{fig:haskellcnfexample}.
+
 \mav{Include an example and some further explanation of Haskell CNF}
 
 {Persistent languages tackle the problem of automatically moving data between disk
@@ -413,6 +433,10 @@ our system.}
   with serialiezd data.
 }
 
+Effect systems~\cite{effect-types}, Cyclone~\cite{cyclone-pldi}, Region
+calculi~\cite{mlkit-retrospective}. Linear types~\cite{wadler-linear-types}.
+
+
 \paragraph{Compiler support for external dense data}
 
 If we look instead at compiler support for computing with data in dense or
@@ -420,8 +444,14 @@ external forms, there are many compilers for stream processing
 languages~\cite{streamit,wavescript-nsdi}---or restricted languages such as
 XPath~\cite{xpath-streams}---that generate efficient computations over data
 streams.
+
+Overview of XPath.
+
+Overview of StreamIt.
+
 These are somewhat related, but \ourcalc differs in targeting general
 purpose recursive functions over algebraic datatypes.
+
 
 \mav{Include brief overview of XPath and Stream-It/WaveScript.}
 
@@ -445,6 +475,8 @@ deserialize loop.  But traditional deforestation
 approaches~\cite{wadler-deforestation}, don't rise to being able to handle
 a full deserializer, and popular approaches based on more restrictive {\em combinator
   libraries}~\cite{stream-fusion} are less expressive than \lamadt and \ourcalc.
+
+Example of Wadler's treeless language \figref{fig:treeless}.
 
 \mav{Include brief overview of the history of deforestation}
 
@@ -554,8 +586,10 @@ chosen to match the traversal patterns of an application, enabling the removal
 of pointers, as in our layouts. Ren et al. use a library-based approach:
 applications are written using high-level tree interfaces, with specific
 layouts chosen based on hardware and application considerations. In contrast,
-our work focuses on compiler-driven transformations of both the tree layout
+this work focuses on compiler-driven transformations of both the tree layout
 and the code that traverses the tree.
 
+Nested data parallelism~\cite{nested-data-parallel}.
+Array programming~\cite{array-programming}.
 \mav{Have a few paragraphs on general array programming and on flattening
   and nested data parallelism.}
