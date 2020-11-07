@@ -109,6 +109,25 @@ A full proof of type safety for the \ourcalc{} language is included in \Cref{app
 
 \section{Motivation}\label{sec:intro-motivation}
 
+\begin{figure}
+  \begin{subfigure}[t]{\linewidth}
+    \centering
+    \includegraphics[scale=0.5]{intro-tree-unpacked}
+    \caption{Standard representation of a tree structure in C: by default,
+      word-sized tags {\em and} pointers.}
+    \label{fig:intro-tree-unpacked}
+  \end{subfigure}
+  \begin{subfigure}[t]{\linewidth}
+    \centering
+    \includegraphics[scale=0.5]{intro-tree-packed}
+    \caption{Serialized version of the same tree.  Not to scale: tags take one
+      byte and integers eight.}
+    \label{fig:intro-tree-packed}
+  \end{subfigure}
+  \caption{Standard and serialized representations of trees}
+  \label{fig:intro-fig}
+\end{figure}
+
 Consider the simple tree data structure in \Figref{fig:haskell_tree}, written in
 a language that supports algebraic datatypes, where a tree is either a leaf with
 an integer or a node with two trees.
@@ -181,24 +200,6 @@ spine (capturing the ``tags'' of the 5 nodes in the tree), rather than
 Storing the pointers that maintain
 the internal structure of the tree represents a significant storage overhead.
 
-\begin{figure}
-  \begin{subfigure}[t]{\linewidth}
-    \centering
-    \includegraphics[scale=0.5]{intro-tree-unpacked}
-    \caption{Standard representation of a tree structure in C: by default,
-      word-sized tags {\em and} pointers.}
-    \label{fig:intro-tree-unpacked}
-  \end{subfigure}
-  \begin{subfigure}[t]{\linewidth}
-    \centering
-    \includegraphics[scale=0.5]{intro-tree-packed}
-    \caption{Serialized version of the same tree.  Not to scale: tags take one
-      byte and integers eight.}
-    \label{fig:intro-tree-packed}
-  \end{subfigure}
-  \caption{Standard and serialized representations of trees}
-  \label{fig:intro-fig}
-\end{figure}
 
 % Though it uses more storage, the usual pointer-based representation is generally easier to manipulate and traverse
 % using standard idioms in high-level programming languages.
