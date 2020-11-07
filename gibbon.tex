@@ -1,4 +1,4 @@
-\mav{Briefly introduce Gibbon again}
+% \mav{Briefly introduce Gibbon again}
 
 % \mav{Make clear that the Gibbon compiler is a collaborative project, of which I was one
 %   member, though my contributions to it are major (wording?) so in this section I'll use
@@ -6,7 +6,7 @@
 
 \section{Converting Functional Programs to the Location Calculus}\label{sec:infer-local}
 
-\ourcalc captures a notion of computation over (mostly) serialized data,
+\ourcalc{} captures a notion of computation over (mostly) serialized data,
 \emph{exposing} choices about representation. It provides the levers needed by a human
 or another tool to explore the design space of optimization trade-offs above
 this level, \ie{} for the human or tool to answer the question
@@ -260,7 +260,7 @@ when no other regions point into it.
 %% compiler needs to generate code for computing the pointers of each field of the
 %% structure in order to bind them to pattern variables.
 
-Pattern matches in \ourcalc bind all constructor fields, including those that
+Pattern matches in \ourcalc{} bind all constructor fields, including those that
 occur at non-constant offsets, later in memory.
 %
 The compiler must determine which fields are reachable based on either (1)
@@ -304,11 +304,11 @@ already performs.
 %% %% is tricky and requires some further analysis.
 
 
-To this end, I use a variation of a technique I previously proposed in
-\cite{ecoop17-gibbon}.  Specifically, I assign \emph{traversal effects} to
-functions.  A function is said to {\em traverse} it's input location if it
-touches every part of it.  In \ourcalc{}, a case expression is the only way to
-induce a traversal effect.  If all clauses of the case expression in turn
+To this end, I use a variation of a technique I previously proposed
+in~\cite{ecoop17-gibbon}. Specifically, I assign \emph{traversal effects} to
+functions. A function is said to \emph{traverse} it's input location if it
+touches every part of it. In \ourcalc{}, a case expression is the only way to
+induce a traversal effect. If all clauses of the case expression in turn
 traverse the packed elements of the corresponding data constructors, the
 expression traverses to the end of the scrutinee.
 %
@@ -370,7 +370,7 @@ bytes for offsets v.s. cycles for unnecessary traversals.
 % \paragraph{Random-access nodes include offsets}
 % \paragraph{Adding offsets}
 %\paragraph{Layout Information}
-\label{sec:RAN}
+%\label{sec:RAN}
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 %% When the compiler knows for sure that a data constructor being allocated will
@@ -919,11 +919,11 @@ general case where programs may have small and short-lived regions.
 %% can represent an extreme
 
 The choice of allocation strategy can be informed by static information the
-compiler gathers about the lifetime and potential size range of the region.  For
+compiler gathers about the lifetime and potential size range of the region. For
 example, the region-based MLKit compiler achieved significant speedups from
-statically classifying a majority of regions as constant-sized
-\cite{mlkit-retrospective}, in which case they are allocated inside the procedure
-stack frame.
+statically classifying a majority of regions as
+constant-sized~\cite{mlkit-retrospective}, in which case they are allocated
+inside the procedure stack frame.
 %
 % In our case, because we are packing many logical values into a smaller number of
 In our approach, we unbox constant-sized data types (e.g. numbers), and
@@ -943,17 +943,48 @@ opportunity for constant-sized regions.
 
 \section{Applications and Evaluation}
 \label{section:applications}
-\mav{General overview of the kinds of things we tested in Gibbon, how fast they were, etc.}
+
+To evaluate the the Gibbon compiler, it was tested on a number of different
+benchmarks, from simple microbenchmarks to more realistic tasks like
+transforming abstract syntax trees and processing large amounts of data.
+For purposes of evaluation, a couple of other points of comparison were
+chosen, and the results will be given in this section.
 
 \subsection{Microbenchmarks}
 
-See \tabref{tab:litmus-table}.
+Gibbon was evaluated on a series of microbenchmarks to demonstrate how it
+handles simple functions and operations on binary trees. From these results,
+it is clear that Gibbon is flexible enough that it can maintain the
+correct asymptotic complexity of some common data structure operations by
+taking advantage of the indirections described in~\secref{subsec:indirections},
+while \emph{also} producing extremely efficient code for processing
+pure serialized data.
 
-We are
+For the benchmarks in this section, Gibbon was evaluated with respect to
+pointer-based C code, Haskell Compact Normal Form (compiled with GHC),
+and Cap'n'Proto.
+%
+The full microbenchmark results are given in\tabref{tab:litmus-table}. In short,
+Gibbon is 2.6 / 3.2 / 9.4 $\times$ faster than pointer-based C / Haskell CNF /
+Cap'n'Proto respectively.
+
+Gibbon is also benchmarked against itself: for the rest of this section,
+Gibbon1~\footnote{The 1 in Gibbon1 signifies that the first version of the
+Gibbon compiler worked like Gibbon1, while Gibbon2 represents the current
+version of the Gibbon compiler.} will refer to the Gibbon compiler configured to
+perform deep copies rather than insert indirections, synthesize dummy traversals
+rather than insert random-access nodes, and to use fixed-size rather than
+growable regions (because indirections are used to build growable regions). The
+hypothesis was that Gibbon1 would be slightly faster on benchmarks that are
+straightforward traversals of serialized data, while Gibbon2 would be
+significantly faster in cases where indirections or random access was necessary
+to preserve asymptotic complexity. This was indeed the case, as Gibbon2 was
+202$\times$ faster than Gibbon1 across all benchmarks, versus 0.96$\times$ for
+benchmarks with only apples-to-apples asymptotics.
 % gibbon pointer cnf capn
-202 / 2.6 / 3.2 / 9.4  $\times$ geomean faster than
-Gibbon/NonPacked/CNF/CapNP respectively, and
-0.96 / 2.6 / 3.2 / 7.3 $\times$ faster for only apples-to-apples asymptotics.
+% 202 / 2.6 / 3.2 / 9.4  $\times$ geomean faster than
+% Gibbon/NonPacked/CNF/CapNP respectively, and
+% 0.96 / 2.6 / 3.2 / 7.3 $\times$ faster for only apples-to-apples asymptotics.
 %% $3.2\times$,
 %% $9.4\times$, and
 %% $202\times$
@@ -961,31 +992,31 @@ Gibbon/NonPacked/CNF/CapNP respectively, and
 
 %% \tabref{tab:litmus-table} shows the results.
 
-\mav{Re-write to either remove or better explain difference between Gibbon1 and Gibbon2.}
+% \mav{Re-write to either remove or better explain difference between Gibbon1 and Gibbon2.}
 
-The column labeled ``Gibbon2'' shows performance of \lamadt programs
-(low-level \ourcalc control was not needed for any of these)
-using indirections and offsets, automatically.
-%
-``Gibbon1'' shows the approach described in \cite{ecoop17-gibbon}.
-%
-There are two major sources of overhead for our new approach versus Gibbon1:
+% The column labeled ``Gibbon2'' shows performance of \lamadt programs
+% (low-level \ourcalc{} control was not needed for any of these)
+% using indirections and offsets, automatically.
+% %
+% ``Gibbon1'' shows the approach described in \cite{ecoop17-gibbon}.
+% %
+% There are two major sources of overhead for our new approach versus Gibbon1:
 
+After investigating the C code generated for both Gibbon1 and Gibbon2,
+the overhead of Gibbon2 on some benchmarks comes from two sources:
+%
 \begin{enumerate}
-\item Growable regions:
-In each case, our compiler starts with smaller, growable regions\footnote{starting at 64K bytes},
-which we require to create small output regions as
-in {\bf id} or {\bf treeInsert},
-but we suffer the overhead of bounds-checking. On the other hand,
-Gibbon always stores fully serialized data in huge regions.
+\item Growable regions: In each case, our compiler starts with smaller, growable
+regions\footnote{starting at 64K bytes}, which we require to create small output
+regions as in {\bf id} or {\bf treeInsert}, but we suffer the overhead of
+bounds-checking. On the other hand, Gibbon1 always stores fully serialized data
+in huge regions.
 
-\item Likewise, we have found that the backend C compiler is sensitive to the number
-of cases in switch statements on data constructor tags (for instance, triggering
-the jump table heuristic).  By including the possibility that each tag we read
-may be a tagged indirection,
-% or end-of-chunk,
-we increase
-code size and increase the number of cases in our switch statements.
+\item Likewise, we have found that the backend C compiler is sensitive to the
+number of cases in switch statements on data constructor tags (for instance,
+triggering the jump table heuristic). By including the possibility that each tag
+we read may be a tagged indirection, % or end-of-chunk, we increase code size
+and increase the number of cases in our switch statements.
 \end{enumerate}
 
 
@@ -995,7 +1026,8 @@ as we would expect based on Gibbon1
 requiring additional traversals to compile those functions.
 
 \paragraph{Versus pointer-based representations}
-The ``NonPacked'' approach is \ourcalc configured to always insert indirections
+For the pointer-based C results, labeled ``NonPacked'' in the table
+Gibbon was configured to \emph{always} insert indirections
 and thus emulate a traditional object representation.
 % example of a traditional compilation approach
 % that use one heap object per data constructor.
@@ -1004,7 +1036,7 @@ In this case, we are being overly friendly to this pointer-based representation 
 allowing it to read its input (for example, the input tree to {\bf treeInsert})
 in an already-deserialized, pointer-based form.  A full apples-to-apples
 comparison would force the pointer-based version to deserialize the input
-message and reserialize the output; but we omit that here to focus only on the
+message and reserialize the output. I omit that here to focus only on the
 cost of the tree traversals themselves.
 %
 %% Similarly, the earlier Gibbon work compared a subset of these programs against a
@@ -1037,7 +1069,7 @@ cost of the tree traversals themselves.
 The biggest differences in \tabref{tab:litmus-table} are due
 asymptotic complexity.
 However, for constant factor performance, we see the expected
-relationship---that our approach and Gibbon are faster than CNF and Cap'N Proto,
+relationship---that our approach is faster than CNF and Cap'N Proto,
 sometimes by an order of magnitude, \eg\,{\bf add1Leaves}.
 
 CNF and Cap'N Proto encode some metadata in their serialization, to
@@ -1095,7 +1127,7 @@ logarithmic.
 %
 However, this causes the subsequent traversal (propagateConst) to slow
 down, as it now has to unnecessarily skip over some extra bytes.  Likewise, if
-we do not include findMax in the whole program, the data remains fully
+we do not include {\bf findMax} in the whole program, the data remains fully
 serialized, which is why {\bf propagateConst} and {\bf findMax} run separately
 take less than 440ms, but run together take 480ms.  Yet the latter time is still
 6$\times$ and 9$\times$ faster, respectively, than CNF and Cap'N Proto!
@@ -1322,18 +1354,18 @@ take less than 440ms, but run together take 480ms.  Yet the latter time is still
 
 \subsubsection{Twitter JSON Benchmark}
 
-For a real data set, we
-use Twitter metadata consisting of user ID's and hashtags for all tweets posted
-in 1 month, and count the occurrences of the hashtag ``cats'' in this dataset.
-Here we seek to replicate and extend the CNF experiment reported by
-\cite{cnf-icfp15}.
+Beyond microbenchmarks, Gibbon has been evaluated on more realistic benchmarks.
+Here, we take a look at Twitter metadata consisting of user ID's and hashtags
+for all tweets posted in 1 month, and count the occurrences of the hashtag
+``cats'' in this dataset. The goal is to replicate and extend the CNF experiment
+reported by \cite{cnf-icfp15}.
 
-The dataset is stored on disk in JSON format, and we use RapidJSON
-v1.1.0 ({\footnotesize\url{http://rapidjson.org/}}) as a performance baseline: a widely
+The dataset is stored on disk in JSON format, and we use RapidJSON v1.1.0
+({\footnotesize\url{http://rapidjson.org/}}) as a performance baseline: a widely
 recognized fast C++ JSON library.
 %
 In \figref{fig:twitter_slowdown_plot}, we vary the amount of data processed,
-up to 1GB.  (For each data-point, taking the median of 9 trials
+up to 1GB. (For each data-point, taking the median of 9 trials
 ensures the data is already in the Linux disk cache.)
 %
 For fairness, all versions read the data via a single \il{mmap} call, plus
@@ -1360,10 +1392,10 @@ the entire input file, then RapidJSON would have to parse the entire file
 (writing the DOM tree out to memory, overflowing last level cache), then read
 that same tree back into memory in a second pass to count hashtags.
 %
-Nevertheless, in spite of this single-pass advantage, our compiler achieves
+Nevertheless, in spite of this single-pass advantage, Gibbon achieves
 6$\times$ and 12$\times$ speedup over RapidJSON lexer/parser.
 %
-We process the 9.1M tweets in 0.39s.
+It processes the 9.1M tweets in 0.39s.
 
 
 \begin{figure}
