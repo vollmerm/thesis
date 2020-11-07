@@ -492,16 +492,29 @@ purpose recursive functions over algebraic datatypes.
 
 \paragraph{Fusion and deforestation}
 
+\emph{Deforestation} is the technique of removing intermediary list/tree-like
+data in functional computations~\cite{wadler-deforestation}.
+%
+For example (taken from Wadler's original paper), given the functional program
+\il{sum(map square (upto 1 n))}, a compiler or interpreter would generally have
+\il{upto 1 n} return a list of numbers from $1$ to $n$, then have the \il{map}
+procedure return a new list with the numbers squared, and finally have \il{sum}
+consume this list and return an integer. This style of programming is convenient,
+because it allows programmers to build their programs out of general, re-usable
+procedures like \il{map} and \il{upto}, but it results in unnecessary memory
+allocation in the form of intermediary structures. Deforestation transforms
+this computation and removes the need to allocate intermediary lists, instead
+computing the sum directly via a single tail-recursive procedure.
+
 The problem of computing \emph{without} deserializing can be viewed as a
-\emph{{fusion/deforestation}} problem: to fuse the compute loop with the
-deserialize loop.  But traditional deforestation
-approaches~\cite{wadler-deforestation}, don't rise to being able to handle
-a full deserializer, and popular approaches based on more restrictive {\em combinator
-  libraries}~\cite{stream-fusion} are less expressive than \lamadt and \ourcalc.
+fusion/deforestation problem: to fuse the compute loop with the deserialize
+loop. But traditional deforestation approaches like
+Wadler's~\cite{wadler-deforestation}, don't rise to being able to handle a full
+deserializer, and popular approaches based on more restrictive \emph{combinator
+libraries}~\cite{stream-fusion} are less expressive than \lamadt{} and
+\ourcalc{}.
 
 Example of Wadler's treeless language \figref{fig:treeless}.
-
-\mav{Include brief overview of the history of deforestation}
 
 \paragraph{Ornaments}
 
