@@ -434,8 +434,30 @@ our system.}
   with serialiezd data.
 }
 
+For decades there has been significant research into using types to track and
+constrain resource use in programming languages. In the 1980s, researchers like
+Lucassen and Gifford developed effect type systems~\cite{effect-types} which use
+types to perform side-effect analysis. Their approach involves a type system
+with three \emph{kinds}: types, which describe the value that an expression may
+evaluate to; effects, which describe the side-effects that an expression may
+perform; and regions, which describe the area of the store in which side-effects
+may occur.
+
 Effect systems~\cite{effect-types}, Cyclone~\cite{cyclone-pldi}, Region
-calculi~\cite{mlkit-retrospective}. Linear types~\cite{wadler-linear-types}.
+calculi~\cite{mlkit-retrospective}.
+
+Another commonly discussed way to manage resources, and particularly memory,
+using types in functional programs is the use of \emph{linear
+types}~\cite{wadler-linear-types}. Values that have a linear type must be used
+exactly once, and (as Wadler writes), just like the world, they can not be
+duplicated or destroyed. Because of this, they do not require garbage
+collection, so a functional programmer may use linear types to construct
+programs that need no automatic memory management. Additionally, linear types
+can be used to do in-place updates to mutable data structures in a functional
+way. This second property is important to this thesis, as later, in
+\secref{subsec:linear}, I show how this property of linear types can be used to
+safely write and read serialized data in Linear Haskell (an extension so the Haskell
+programming language that adds support for linear types).
 
 
 \paragraph{Compiler support for external dense data}

@@ -1521,6 +1521,285 @@ packed version was 2.92$\times$ faster than the pointer-only version.
 
 \subsection{Parallel Programming Benchmarks}\label{subsec:parallelbench}
 
-\mav{Copy over the benchmark results from the parallel gibbon paper.}
-\mav{Paraphrase a brief summary of parallel gibbon again, reference the
-  earlier section in it.}
+\begin{figure*}
+  \footnotesize
+  \centering
+  %% \renewcommand{\arraystretch}{1.3}
+  \setlength{\tabcolsep}{0.4em}
+  \begin{tabular}{@{}r cc cccc r ccccc r ccccc@{}}
+    \toprule
+    & LoCal & \phantom{} & \multicolumn{4}{c}{Ours} & \phantom{} & \multicolumn{5}{c}{\MPL{}} & \phantom{} & \multicolumn{5}{c}{GHC} \\
+    \cmidrule{2-2}
+    \cmidrule{4-7}
+    \cmidrule{9-13}
+    \cmidrule{15-19}
+    Benchmark & $T_s$ && $T_1$ & O & $T_{18}$ & S && $T_s$ & $T_1$ & O & $T_{18}$ & S && $T_s$ & $T_1$ & O & $T_{18}$ & S \\
+    & (1) && (2) & (3) & (4) & (5) && (6) & (7) & (8) & (9) & (10) && (11) & (12) & (13) & (14) & (15) \\
+    \midrule
+
+    %%
+    fib & 4.3 && 3.7 & -12.9 & 0.34 & 12.5 && 16 & 16.2 & 1 & 1.14 & 14 && 7 & 7.2 & 3 & 0.6 & 11.7 \\
+
+    %%
+    buildFib  & 6.8 && 5.9 & -13.6 & 0.52 & 13.1 && 25 & 25.1 & 0.2 & 1.8 & 13.9 && 12.7 & 12.7 & 0 & 1 & 12.7 \\
+
+    %%
+    buildTree & 0.77 && 0.78 & 0.54 & 0.11 & 7.1 && 1.4 & 1.9 & 31.3 & 0.4 & 3.6 && 4 & 4.4 & 9.2 & 0.57 & 7 \\
+
+    %%
+    add1Tree & 0.91 && 1.1 & 25.8 & 0.11 & 8.1 && 2.2 & 2.9 & 30.5 & 0.58 & 3.8 && 4 & 4.5 & 9.7 & 0.67 & 6 \\
+
+    %%
+    sumTree & 0.24 && 0.29 & 19.1 & 0.03 & 8.5 && 1.04 & 1.03 & -0.3 & 0.07 & 14.1 && 0.54 & 0.6 & 11.1 & 0.07 & 7.9 \\
+
+    %%
+    buildKdTree & 5.3 && 5.3 & 0 & 2.6 & 2 && 12.6 & 13.5 & 7.1 & 2.2 & 5.7 && 326.9 & 334 & 2.2 & 118.3 & 2.8 \\
+
+    %%
+    pointCorr & 0.14 && 0.14 & 0 & 0.014 & 10.1 && 0.62 & 0.62 & 0 & 0.05 & 12.9 && 0.16 & 0.18 & 18.1 & 0.014 & 11.1 \\
+
+    %%
+    barnesHut & 16.3 && 16.1 & -1.4 & 1.4 & 11.7 && 41.8 & 30.6 & -26.9 & 2.2 & 18.9 && 106.5 & 109.5 & 2.8 & 16.2 & 16.6 \\
+
+    %%
+    coins & 10.3 && 9.3 & -9.7 & 4.7 & 2.18 && 1.9 & 1.3 & -30.7 & 0.96 & 2.03 && 0.89 & 0.9 & 12.5 & 0.74 & 4.8 \\
+
+    %%
+    countnodes & 0.035 && 0.039 & 11.4 & 0.007 & 4.9 && 0.06 & 0.05 & -16.7 & 0.006 & 10 && 0.16 & 0.18 & 12.5 & 0.033 & 4.8 \\
+
+    \bottomrule
+  \end{tabular}
+  \vspace{2mm}
+  \normalsize
+  \caption{
+    Benchmark results.
+    Column $T_s$ shows the run time of a sequential program.
+    %% which serves the purpose of a sequential baseline.
+    %
+    $T_1$ is the run time of a parallel program on a single core, and
+    $O$ the percentage overhead relative to $T_s$, calculated as
+    $((T_1 - T_s) / T_s) * 100$.
+    %
+    $T_{18}$ is the run time of a parallel program on 18 cores and
+    $S$ is the speedup relative to $T_s$, calculated as $T_s / T_{18}$.
+    %
+    The overhead (Column 3) and speedup (Column 5) for Ours are
+    computed relative to sequential LoCal (Column 1).
+    %
+    For \MPL{} and GHC, the overheads (Columns 8 and 13) and speedups (Columns 10 and 15)
+    are self-relative ---
+    parallel \MPL{} and GHC programs are compared to their sequential variants.
+    %
+    All timing results are reported in seconds.
+  }
+  \label{fig:benchmark-results}
+\end{figure*}
+
+To measure the overheads of compiling parallel allocations using
+fresh regions and indirection pointers, we compare our single-core performance
+against the original, sequential LoCal implementation.
+%
+LoCal is also a good sequential baseline for performing speedup calculations
+since its programs operate on serialized heaps, and
+as shown in prior work, are significantly faster than their pointer-based counterparts.
+%
+Note that prior work \cite{Gibbon} compared sequential constant factor performance
+against a range of compilers including GCC and Java.  Since LoCal
+outperformed those compilers in sequential tree-traversal workloads, we focus
+here on comparing against LoCal for sequential performance.
+
+We also measure the scaling properties of our implementation by comparing its
+performance to other programming languages and systems
+that support efficient parallelism for recursive, functional programs
+--- \MPL{} \footnote{https://github.com/MPLLang/mpl} \cite{MPL},
+OCaml \cite{OCaml}, and GHC.
+%
+\MPL{} (an extension of MLton \footnote{http://www.mlton.org})
+is a whole program optimizing compiler for the Standard ML \cite{StandardML}
+programming language,
+%
+and it supports nested fork/join parallelism, and generates extremely efficient code.
+%% and hence serves as a baseline for comparing against a system that is pointer-based.
+%
+%
+We compare against OCaml and GHC as the most optimized existing implementations of the
+general purpose functional languages Objective Caml and Haskell respectively.
+
+%% lscpu          -- processor info
+%% free -m        -- memory
+%% lsb-release -a -- OS
+
+The experiments in this section are performed on a 48 core server made up of
+2 x 2.9 GHz 24 core Intel Xeon Platinum 8268 processors, with 1.5TB of memory,
+and running Ubuntu 18.04.
+%
+\note{mention numactl.}
+%
+Each benchmark is run 9 times, and the median is reported.
+%
+To compile the C programs generated by our implementation we use
+GCC 7.4.0 with all optimizations enabled (option \il{-O3}), and
+the Intel Cilk Plus extension (option \il{-fcilkplus}) to realize parallelism.
+%
+To compile sequential LoCal programs, we use the Gibbon compiler but disable the
+changes that add parallelism with appropriate flags.
+%
+For \MPL{}, we use version \il{20200220.150446-g16af66d05} compiled from its source code.
+%
+For OCaml, we use the Multicore OCaml compiler \cite{multicore-ocaml}
+(version 4.10 with options \il{-O3}),
+along with the \il{domainslib} \footnote{https://github.com/ocaml-multicore/domainslib}
+library for parallelism.
+%
+For GHC, we use its version 8.6.5 (with options \il{-threaded -O2}) along with
+the monad-par\cite{monad-par} library for parallelism.
+
+\newcommand{\numbenchmarks}{\Red{10} }
+
+We use the following set of of \numbenchmarks \csk{udpate this number before submission.} benchmarks to evaluate performance.
+%
+For GHC, we use strict datatypes in benchmarks which generally offers the
+same or better performance and avoids problematic interactions between
+laziness and parallelism.
+
+\begin{itemize}
+
+\item \textbf{fib}:
+  Compute the 48th fibonacci number with a sequential cutoff at n=30.
+
+\item \textbf{buildFib}:
+  This is an artificially designed benchmark that performs lot of parallel
+  allocations, and has enough work to amortize their costs.
+  %
+  It constructs a balanced binary tree of depth 18, and computes
+  the 20th fibonacci number at each leaf.
+  %
+  This benchmark is embarrassingly parallel, and it is included here to
+  measure the overheads of parallel allocations under ideal conditions.
+  %
+  The sequential cutoff is at depth=6.
+
+%% \item \textbf{buildTree} and \textbf{add1Tree} and \textbf{sumTree}:
+%%   \il{buildTree} constructs a a balanced binary tree of depth 26 with
+%%   an integer at the leaf, and \il{add1Tree} and \il{sumTree}
+%%   operate on this tree.
+%%   %% \il{add1Tree} is a mapper function which adds 1 to all the leaves and
+%%   %% \il{sumTree} is a reducer which sums up all leaves in the tree.
+%%   %% The sequential cutoff for each of these benchmarks is at depth=18.
+
+\item \textbf{buildKdTree} and \textbf{countCorrelation} and \textbf{allNearest}:
+  \il{buildKDTree} constructs a kd-tree \cite{kdtree}
+  containing 1M 3-d points
+  %%   %% in the Gauss–Kuzmin distribution
+  in the Plummer distribution.
+  %
+  The sequential cutoff is at a node which contains less than 100K points.
+  %
+  \il{countCorrelation} takes as input a kd-tree and a list of 100 3-d points,
+  and counts the number of points which are correlated to each one.
+  %
+  \il{allNearest} computes the nearest neighbor of all 1M 3-d points using the kd-tree.
+
+
+%% \item \textbf{buildQuadTree} and \textbf{barnesHut}:
+%%   \il{buildQuadTree} constructs a quad-tree
+%%   containing 4M 2-d point-masses distributed uniformly within a square, and
+%%   \il{barnesHut} uses this tree to run an nbody simulation over the given point-masses.
+%%   %
+%%   In this case, we implemented optimizations that go beyond the
+%%   race-free, purely functional style of the other benchmarks.
+%%   %
+%%   For all three compilers, we apply point forces by updating an array in parallel, using
+%%   potentially-racy mutation operations.  With library support these
+%%   unsafe operations can be hidden behind a pure interface.
+
+\item \textbf{barnesHut}:
+  This benchmark uses a quad tree
+  containing 1M 2-d point-masses distributed uniformly within a square
+  to run an nbody simulation over the point-masses.
+
+\item \textbf{coins}
+  This benchmark is taken from GHC's NoFib \footnote{https://gitlab.haskell.org/ghc/nofib}
+  benchmark suite. It is a combinatorial search problem that computes
+  the number of ways in which a certain amount of money can be paid by
+  using the given set of coins. It uses an append-list to store each combination
+  of coins that adds up to the amount, and counts the number of non-nil elements
+  in this list later. Only the time required to construct this list is measured.
+  %
+  The input set of coins and their quantities are
+  \il{[(250,55),(100,88),(25,88),(10,99),(5,122),(1,177)]},
+  and the amount to be paid is 999.
+  %
+  The sequential cutoff is at height=3.
+
+\item \textbf{countNodes}:
+  This benchmark taken from LoCal's benchmark suite.
+  %
+  It operates on ASTs used internally in the Racket compiler, and counts the number
+  of nodes in them.
+  %
+  The ASTs are a complicated datatype (9 mutually recursive types with 36
+  data constructors) and are stored on disk as text files.
+  %
+  The implementations for GHC, \MPL, and OCaml have to parse these text files before
+  operating on them.
+  %
+  For our implementation, we store the serialized data on disk in its
+  binary format, and the program reads this data using a single \il{mmap} call.
+  %
+  To ensure an apples-to-apples comparison, we do not measure the time required
+  to parse the text files for GHC, \MPL{}, and OCaml, and for our implementation,
+  we run the \il{mmap}'d file through an identity function to ensure that it
+  is loaded into memory.
+  %
+  The size of the text file is 1.2G, and that same file
+  when serialized for our implementation is 356M.
+  %
+  The AST has around 100M nodes in it.
+
+\item \textbf{mergeSort}:
+  %
+  This benchmark starts with a parallel algorithm, and then bottoms out to sequential
+  quick sort at the leaves.
+  %
+  For our implementation, we use the \il{qsort} from the C standard library as
+  the sequential sorting algorithm.
+  %
+  All other compilers use a sequential quick sort implemented in their source language.
+  %
+  All implementations use the number of elements in the array to decide when to
+  bottom out to the sequential algorithm, but the exact threshold is different in each case.
+  %
+  For ours, it's when the array contains less than 100K elements.
+  %
+  For \MPL{}, it's 4096 elements.
+  %
+  The input in all cases is an array containing 4M random floating point numbers.
+  %
+  In this benchmark, we implemented optimizations that go beyond the
+  race-free, purely functional style of the other benchmarks.
+  %
+  For all four compilers, the input array is first copied into a fresh one,
+  and then this array is sorted in place, by using potentially-racy mutation operations.
+  %
+  With library support these unsafe operations can be hidden behind a pure interface.
+
+
+%% \item \textbf{ray}:
+%% \item \textbf{x86Compiler}:
+
+
+\end{itemize}
+
+We do not include some other classic benchmarks such as Mandelbrot,
+dense matrix multiplication etc. since they do not require allocating or traversing data
+in serialized heaps.
+%
+With our compiler, these benchmarks would perform similarly to their
+implementations written using C/C++, as shown by the in-place
+merge sort benchmark.
+
+\Figref{fig:benchmark-results} shows the full results of comparing performance
+of programs compiled with Parallel Gibbon to the other implementations.
+
+\note{Explain more.}

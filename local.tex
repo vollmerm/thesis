@@ -1,15 +1,19 @@
 \section{Overview}
 
-Traditional compilers are built on a number of well-defined
-intermediate abstractions and translations that close the semantic gap
-between source and target.  What we {need are analogous way-points to
-  structure compilers that target serialized-data traversals}
-(stream-processors, essentially).  Indeed, there is quite a semantic
-gap between the low-level, buffer-mutating, pointer-bumping programs,
-and a source language of high-level, pure, recursive functions on
-algebraic datatypes.  To structure the space between, I propose a
-location calculus, \ourcalc, augmented to track {\em locations} within
-regions (\eg{} byte offsets).
+This section describes \ourcalc{}, which is a programming language
+for programming with serialized data. A primary use case of \ourcalc{}
+is as an \emph{intermediate language} for a compiler.
+%
+Traditional compilers are built on a number of well-defined intermediate
+abstractions and translations that close the semantic gap between source and
+target. If we are building a compiler to generate code that operates on
+serialized data, what we need are analogous way-points to structure compilers
+that target serialized-data traversals (stream-processors, essentially). Indeed,
+there is quite a semantic gap between the low-level, buffer-mutating,
+pointer-bumping programs, and a source language of high-level, pure, recursive
+functions on algebraic datatypes. \ourcalc{} is designed to structure the space
+between, where types are augmented to track \emph{locations} within regions
+(\eg{} byte offsets).
 
 \ourcalc{} follows in the tradition of typed assembly language~\cite{TAL},
 region calculi~\cite{mlkit-retrospective}, and Cyclone~\cite{cyclone-pldi}
