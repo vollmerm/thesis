@@ -1,0 +1,18 @@
+#!/usr/bin/env gnuplot
+
+cd data_dir
+
+load "../common_styles.gpi"
+set key off
+
+set datafile separator ","
+set terminal epslatex size 6,3 color colortext font ',14'
+set output "slowdown_treewalk_plot.tex"
+set xlabel "Size of tree (bytes)"
+set ylabel "Speedup of serialized implementation"
+set yrange [1:]
+set key tmargin horizontal
+
+set logscale xy
+
+plot 'slowdown_treewalk.csv' using 1:2 with lp ls 2 title "C pointer"

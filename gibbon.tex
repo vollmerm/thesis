@@ -1584,10 +1584,19 @@ and linear access patterns of Gibbon's packed approach yield speedups of
 2.5-3$\times$ for fold and 2$\times$ for map.
 
 \begin{figure}
-  \centering
-  \input{slowdown_countnodes_plot}
-  \caption{Speedup of serialized implementation of Racket core fold benchmark versus
-    pointer-based implementation}\label{fig:racketcore-map}
+  \begin{subfigure}[t]{\linewidth}
+    \centering
+    \input{slowdown_countnodes_plot}
+    \caption{Racket core fold benchmark}
+  \end{subfigure}
+  \begin{subfigure}[t]{\linewidth}
+    \centering
+    \input{slowdown_treewalk_plot}
+    \caption{Racket core map benchmark}
+  \end{subfigure}
+  \caption{Speedup of serialized implementation of Racket core benchmarks versus
+    pointer-based implementations (y-axis is number of times faster Gibbon is than
+    pointer-based C)}\label{fig:racket-core-slowdown}
 \end{figure}
 
 
