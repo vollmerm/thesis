@@ -1498,10 +1498,15 @@ in the language, so tools that processed a language like WebAssembly would benef
 from the ability to operate directly on programs as bytecode and therefore
 skipping the steps assembling and disassembling programs before manipulating them.
 
-For the purposes of evaulation, I implemented and benchmarked a simple compiler
-implemented in \lamadt. This compiler represents programs as a control flow graph,
-and performs simple operations like dead code elimination and constant folding, before
-finally generating assembly code for a simple abstract machine. The passes are listed
+This section will discuss two benchmarks that test Gibbon's handling of programs
+that operate on serialized abstract syntax trees: a subset of a compiler for
+a simple language, and a traversal of macro-expanded Racket s-expressions.
+
+\paragraph{Compiler benchmark}
+The compiler for this benchmark was implemented in \lamadt{}. It represents
+programs as a control flow graph, and performs simple operations like dead code
+elimination and constant folding, before finally generating assembly code for a
+simple abstract machine. The passes are listed
 in~\figref{fig:coursecompilerpasses}, the input grammar of the compiler is given
 in~\figref{fig:coursecompilergrammar}, and an example of the compiler's behavior
 is shown in~\figref{fig:coursecompilerexample}.
@@ -1514,10 +1519,70 @@ compiled with Gibbon in both pointer-only and packed modes. On a randomly
 generated input program consisting of a control-flow graph with 1000 blocks, the
 packed version was 2.92$\times$ faster than the pointer-only version.
 
-\mav{Put full data and plot from course compiler benchmark here}
+\paragraph{Racket code benchmark}
 
-\mav{I can maybe put the Racket count nodes benchmark in here too, as a kind of
-  AST traversal.}
+\begin{figure}[t]
+      \footnotesize
+  \begin{code}
+data Toplvl = DefineValues ListSym Expr | DefineSyntaxes ListSym Expr
+            | BeginTop ListToplvl       | Expression Expr
+data Expr = VARREF Sym | Top Sym  | Lambda Formals ListExpr  | App Expr ListExpr
+      | CaseLambda LAMBDACASE     | If Expr Expr Expr        | SetBang Sym Expr
+      | Begin ListExp             | Begin0 Expr ListExpr     | Quote Datum
+      | QuoteSyntax Datum         | QuoteSyntaxLocal Datum
+      | LetValues LVBIND ListExpr | LetrecValues LVBIND ListExpr
+      | WithContinuationMark Expr Expr Expr
+      | VariableReference Sym | VariableReferenceTop Sym | VariableReferenceNull
+$\ldots$
+\end{code}
+\normalsize
+  \caption{Excerpt of Racket Core AST definition, which
+   follows \url{https://docs.racket-lang.org/reference/syntax-model.html}.
+   There are nine data types total.}\label{fig:racket-core}
+\end{figure}
+
+In this portion of the evaluation, we look at
+% two compiler passes, each of which takes a
+the performance of two classes of tree walk
+% (a fold and a map)
+on full Racket Core syntax, an AST definition which is excerpted in \cref{fig:racket-core}.
+%
+These benchmarks consume a Racket abstract syntax tree as input and produce
+either (1) a count of nodes, or (2) a new abstract syntax tree.
+
+We generated a dataset of inputs by collecting all of the (macro-expanded) source
+code from the main Racket distribution, which contains 4,456 files consuming
+1GB of code which drops to 485MB when stripped of whitespace and comments, and
+102MB once packed in our dense representation.
+% (disregarding symbol tables).
+%
+We benchmark on this entire dataset, but report only on a subset, sampling from
+a spectrum of sizes.
+%
+The largest single file was 1.4MB.
+To simulate larger programs (as would be found in whole-program compilation), we
+combined the largest $K$ files into one, varying $K$ from 1 to 4,456.
+%
+This is representative of a whole program compiler, which would indeed need to
+load these modules as one tree.
+
+\figref{fig:racket-core-slowdown} shows the performance of Gibbon's packed mode vs gibbon's
+pointer-only modes, expressed as slowdowns of the pointer-based approaches over
+packed. We measured the last level cache reference and cache misses and found
+dramatic improvements in these for the packed approach (and modest differences
+in the number of instructions executed).
+%
+Nevertheless the performance of pointer-based approaches is good at small sizes:
+(1) trees are small and fit in cache, (2) the single-threaded workload can
+acquire all of the last level cache, not contending with other threads on the
+16-core machine. The end result is that the system is able to mask the bad
+behavior of these implementations at these sizes.
+%
+When the input/output tree sizes exceed the cache size, however, we see a phase
+shift. Once we need to stream trees from memory, the smaller memory footprints
+and linear access patterns of Gibbon's packed approach yield speedups of
+2.5-3$\times$ for fold and 2$\times$ for map.
+
 
 \subsection{Parallel Programming Benchmarks}\label{subsec:parallelbench}
 
@@ -1733,7 +1798,7 @@ laziness and parallelism.
   The sequential cutoff is at height=3.
 
 \item \textbf{countNodes}:
-  This benchmark taken from LoCal's benchmark suite.
+  This benchmark taken from Gibbon's ordinary benchmark suite, as shown in \secref{subsec:ast}.
   %
   It operates on ASTs used internally in the Racket compiler, and counts the number
   of nodes in them.
@@ -1791,15 +1856,15 @@ laziness and parallelism.
 
 \end{itemize}
 
-We do not include some other classic benchmarks such as Mandelbrot,
-dense matrix multiplication etc. since they do not require allocating or traversing data
-in serialized heaps.
+We do not include some other classic benchmarks such as Mandelbrot and dense matrix
+multiplication since they do not require allocating or traversing data in
+serialized heaps.
 %
-With our compiler, these benchmarks would perform similarly to their
-implementations written using C/C++, as shown by the in-place
-merge sort benchmark.
+With our compiler, it is likely these benchmarks would perform similarly to
+their implementations written using C/C++, as shown by the in-place merge sort
+benchmark.
 
 \Figref{fig:benchmark-results} shows the full results of comparing performance
-of programs compiled with Parallel Gibbon to the other implementations.
+of programs written in parallel \ourcalc{} to the other implementations.
 
 \note{Explain more.}
