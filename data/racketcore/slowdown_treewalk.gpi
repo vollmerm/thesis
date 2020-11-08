@@ -12,6 +12,6 @@ set xlabel "Size of tree (bytes)"
 set ylabel "Speedup of serialized implementation"
 set key tmargin horizontal
 
-set logscale xy
+set logscale x
 
 plot 'slowdown_treewalk.csv' using 1:2 with lp ls 2 title "C pointer"

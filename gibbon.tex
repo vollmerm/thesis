@@ -1572,7 +1572,7 @@ packed. We measured the last level cache reference and cache misses and found
 dramatic improvements in these for the packed approach (and modest differences
 in the number of instructions executed).
 %
-Nevertheless, for the fold benchmark, the performance of pointer-based
+Nevertheless,the performance of pointer-based
 approach is good at small sizes: (1) trees are small and fit in cache, (2) the
 single-threaded workload can acquire all of the last level cache, not contending
 with other threads on the 16-core machine. The end result is that the system is
@@ -1580,8 +1580,8 @@ able to mask the bad behavior of these implementations at these sizes.
 %
 When the input/output tree sizes exceed the cache size, however, we see a phase
 shift. Once we need to stream trees from memory, the smaller memory footprints
-and linear access patterns of Gibbon's packed approach yield more significant speedups
-in the fold benchmark.
+and linear access patterns of Gibbon's packed approach yield more significant
+speedups.
 
 \begin{figure}
   \begin{subfigure}[t]{\linewidth}
