@@ -1583,6 +1583,13 @@ shift. Once we need to stream trees from memory, the smaller memory footprints
 and linear access patterns of Gibbon's packed approach yield speedups of
 2.5-3$\times$ for fold and 2$\times$ for map.
 
+\begin{figure}
+  \centering
+  \input{slowdown_countnodes_plot}
+  \caption{Speedup of serialized implementation of Racket core fold benchmark versus
+    pointer-based implementation}\label{fig:racketcore-map}
+\end{figure}
+
 
 \subsection{Parallel Programming Benchmarks}\label{subsec:parallelbench}
 
