@@ -1502,23 +1502,6 @@ This section will discuss two benchmarks that test Gibbon's handling of programs
 that operate on serialized abstract syntax trees: a subset of a compiler for
 a simple language, and a traversal of macro-expanded Racket s-expressions.
 
-\paragraph{Compiler benchmark}
-The compiler for this benchmark was implemented in \lamadt{}. It represents
-programs as a control flow graph, and performs simple operations like dead code
-elimination and constant folding, before finally generating assembly code for a
-simple abstract machine. The passes are listed
-in~\figref{fig:coursecompilerpasses}, the input grammar of the compiler is given
-in~\figref{fig:coursecompilergrammar}, and an example of the compiler's behavior
-is shown in~\figref{fig:coursecompilerexample}.
-
-\mav{Make figures explaining the course compiler.}
-
-To evaluate the impact of using a packed AST on the compiler (similar to the
-previous sections), I compared the benchmark times when the simple compiler was
-compiled with Gibbon in both pointer-only and packed modes. On a randomly
-generated input program consisting of a control-flow graph with 1000 blocks, the
-packed version was 2.92$\times$ faster than the pointer-only version.
-
 \paragraph{Racket code benchmark}
 
 \begin{figure}[t]
@@ -1597,6 +1580,39 @@ speedups.
   \caption{Speedup of serialized implementation of Racket core benchmarks versus
     pointer-based implementations (y-axis is number of times faster Gibbon is than
     pointer-based C)}\label{fig:racket-core-slowdown}
+\end{figure}
+
+
+\paragraph{Compiler benchmark}
+The compiler for this benchmark was implemented in \lamadt{}. It represents
+programs as a control flow graph, and performs simple operations like dead code
+elimination and constant folding, before finally generating assembly code for a
+simple abstract machine. The passes are listed
+in~\figref{fig:coursecompilerpasses}, the input grammar of the compiler is given
+in~\figref{fig:coursecompilergrammar}, and an example of the compiler's behavior
+is shown in~\figref{fig:coursecompilerexample}.
+
+\mav{Make figures explaining the course compiler.}
+
+To evaluate the impact of using a packed AST on the compiler (similar to the
+previous sections), I compared the benchmark times when the simple compiler was
+compiled with Gibbon in both pointer-only and packed modes. On a randomly
+generated input program consisting of a control-flow graph with 1000 blocks, the
+packed version was 2.92$\times$ faster than the pointer-only version.
+
+\begin{figure}
+\footnotesize
+\begin{code}
+data Program = ProgramC BlockList
+data Exp = ArgC Arg | ReadC | NegC Arg | PlusC Arg Arg | NotC Arg
+         | CmpC Cmp Arg Arg | $\ldots$
+data Statement = AssignC Sym Exp | $\ldots$
+data Tail = RetC Exp | SeqC Statement Tail | GotoC Sym
+          | IfC Cmp Arg Arg Sym Sym | $\ldots$
+data BlockList = BlockCons Sym Tail BlockList | BlockNil
+$\ldots$
+\end{code}
+\caption{Excerpt of AST definition for compiler benchmark}\label{fig:coursecompilergrammar}
 \end{figure}
 
 

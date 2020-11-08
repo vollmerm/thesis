@@ -10,7 +10,6 @@ set terminal epslatex size 6,3 color colortext font ',14'
 set output "slowdown_treewalk_plot.tex"
 set xlabel "Size of tree (bytes)"
 set ylabel "Speedup of serialized implementation"
-set key tmargin horizontal
 
 set logscale x
 
