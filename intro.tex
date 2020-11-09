@@ -401,13 +401,13 @@ standardizing on a new binary format for use in memory as well on disk/network.
 {\em Compact Normal Forms} (CNF)~\cite{cnf-icfp15} is
 a feature provided by the Glasgow Haskell Compiler since release 8.2.
 %
-%% This is a
-%% feature reminiscent of Lisp and Self systems which save heap snapshots\footnote{For
-%%   instance, you can save the Self ``world'' to a \il{.snap} file (\url{selflanguage.org}).  In the Lisp lineage, Chez
-%%   Scheme, before version 9, is an example of a system that could save/restore heap
-%%   files (\url{www.scheme.com/csug8}).},
-%% %
-%% except more targeted.
+This is a
+feature reminiscent of Lisp and Self systems which save heap snapshots\footnote{For
+  instance, you can save the Self ``world'' to a \il{.snap} file (\url{selflanguage.org}).  In the Lisp lineage, Chez
+  Scheme, before version 9, is an example of a system that could save/restore heap
+  files (\url{www.scheme.com/csug8}).},
+%
+except more targeted.
 %
 The idea is that any purely functional value, once fully evaluated, can be {\em compacted}
 into its own region of the heap
@@ -472,7 +472,7 @@ Overview of XPath.
 
 Overview of StreamIt.
 
-These are somewhat related, but \ourcalc differs in targeting general
+These are somewhat related, but \ourcalc{} differs in targeting general
 purpose recursive functions over algebraic datatypes.
 
 
@@ -495,7 +495,7 @@ purpose recursive functions over algebraic datatypes.
 \emph{Deforestation} is the technique of removing intermediary list/tree-like
 data in functional computations~\cite{wadler-deforestation}.
 %
-For example (taken from Wadler's original paper), given the functional program
+For example, given the functional program
 \il{sum(map square (upto 1 n))}, a compiler or interpreter would generally have
 \il{upto 1 n} return a list of numbers from $1$ to $n$, then have the \il{map}
 procedure return a new list with the numbers squared, and finally have \il{sum}
@@ -504,17 +504,24 @@ because it allows programmers to build their programs out of general, re-usable
 procedures like \il{map} and \il{upto}, but it results in unnecessary memory
 allocation in the form of intermediary structures. Deforestation transforms
 this computation and removes the need to allocate intermediary lists, instead
-computing the sum directly via a single tail-recursive procedure.
+computing the sum directly via a single tail-recursive procedure. This can
+safely be achieved if certain conditions are met, and it has the potential
+both to greatly improve the performance of functional programs, as well as
+allow functional programmers the freedom to freely compose programs with
+re-usable combinators without worrying about incurring a significant cost
+from intermediary data structures.
 
 The problem of computing \emph{without} deserializing can be viewed as a
 fusion/deforestation problem: to fuse the compute loop with the deserialize
 loop. But traditional deforestation approaches like
-Wadler's~\cite{wadler-deforestation}, don't rise to being able to handle a full
+Wadler's~\cite{wadler-deforestation} don't rise to being able to handle a full
 deserializer, and popular approaches based on more restrictive \emph{combinator
 libraries}~\cite{stream-fusion} are less expressive than \lamadt{} and
 \ourcalc{}.
 
-Example of Wadler's treeless language \figref{fig:treeless}.
+The Gibbon compiler has the ability to perform a kind fusion/deforestation on
+\lamadt{} programs as a compiler optimization, though the details of how it
+accomplishes this are outside the scope of this thesis.
 
 \paragraph{Ornaments}
 
@@ -535,7 +542,7 @@ ornament, and thus lifting functions across that isomorphism is not supported.
 
 \paragraph{Compiler optimizations for tree traversals}
 
-\ourcalc relates to a broader literature on optimizing
+\ourcalc{} relates to a broader literature on optimizing
 tree-traversing programs and heap representations.
 %
 There has been significant work in optimizing the layout and
