@@ -1407,9 +1407,6 @@ It processes the 9.1M tweets in 0.39s.
 
 \subsubsection{Point Correlation}
 
-\mav{Summarize Laith's point correlation benchmark (from ECOOP
-  paper), updating the language to match the new terminology from
-  LoCal.}
 Point correlation  is a well-known algorithm used in data mining~\cite{gray2000n}:
 given a set of points in a k-dimensional space, point correlation computes the number of points in that space  that lie within a
 distance $r$ from a given point $p$.
@@ -1578,27 +1575,37 @@ speedups.
     \caption{Racket core map benchmark}
   \end{subfigure}
   \caption{Speedup of serialized implementation of Racket core benchmarks versus
-    pointer-based implementations (y-axis is number of times faster Gibbon is than
+    pointer-based implementation (y-axis is number of times faster Gibbon is than
     pointer-based C)}\label{fig:racket-core-slowdown}
 \end{figure}
 
 
 \paragraph{Compiler benchmark}
 The compiler for this benchmark was implemented in \lamadt{}. It represents
-programs as a control flow graph, and performs simple operations like dead code
-elimination and constant folding, before finally generating assembly code for a
-simple abstract machine. The passes are listed
-in~\figref{fig:coursecompilerpasses}, the input grammar of the compiler is given
-in~\figref{fig:coursecompilergrammar}, and an example of the compiler's behavior
-is shown in~\figref{fig:coursecompilerexample}.
-
-\mav{Make figures explaining the course compiler.}
+programs as a control flow graph, and performs of a handful of simple compiler
+passes before finally generating assembly code for a simple abstract machine.
+The input grammar of the compiler is given
+in~\figref{fig:coursecompilergrammar}, and the structure of the compiler is as
+follows, roughly matching a few of the passes described
+in~\cite{compilers-textbook}:
+%
+\begin{enumerate}
+  \item \textbf{uniquify}: rename all variables to be unique across the program
+  \item \textbf{optimizeJumps}: remove redundant jumps by simplifying all jump
+        statements that target a block that immediately jumps somewhere else
+  \item \textbf{eliminateDeadBlocks}: remove blocks that are not the target of
+        any jump or conditional jump statement
+  \item \textbf{assignHomes}: assign (stack) locations to local variables
+  \item \textbf{codeGen}: print assembly code
+\end{enumerate}
 
 To evaluate the impact of using a packed AST on the compiler (similar to the
 previous sections), I compared the benchmark times when the simple compiler was
 compiled with Gibbon in both pointer-only and packed modes. On a randomly
 generated input program consisting of a control-flow graph with 1000 blocks, the
-packed version was 2.92$\times$ faster than the pointer-only version.
+packed version was 2.12$\times$ faster than the pointer-only version, andin general
+the performance shown in \figref{fig:coursecompilerbench} is more consistent
+(around 1.5$\times$ to 2$\times$) than the Racket core benchmarks.
 
 \begin{figure}
 \footnotesize
@@ -1615,6 +1622,12 @@ $\ldots$
 \caption{Excerpt of AST definition for compiler benchmark}\label{fig:coursecompilergrammar}
 \end{figure}
 
+\begin{figure}
+  \input{coursecompiler_plot}
+  \caption{Speedup of serialized implementation of compiler passes versus
+  pointer-based implementation (y-axis is number of times faster Gibbon is than
+  pointer-based C)}\label{fig:coursecompilerbench}
+\end{figure}
 
 \subsection{Parallel Programming Benchmarks}\label{subsec:parallelbench}
 

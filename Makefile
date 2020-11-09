@@ -11,14 +11,11 @@ ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 writing := $(wildcard *.tex)
 
-plot1:
+plots:
 	$(ROOT_DIR)/data/twitter_bench/generate.sh $(ROOT_DIR)/data/twitter_bench
-
-plot2:
 	$(ROOT_DIR)/data/point_corr/generate.sh $(ROOT_DIR)/data/point_corr
-
-plot3:
 	$(ROOT_DIR)/data/racketcore/generate.sh $(ROOT_DIR)/data/racketcore
+	$(ROOT_DIR)/data/coursecompiler/generate.sh $(ROOT_DIR)/data/coursecompiler
 
 ed: editingmarks
 editingmarks:
@@ -29,7 +26,7 @@ plain:
 	rm -f $(EDMARK)
 	${LATEXMK} -g thesis.tex
 
-all: $(writing) plot1 plot2
+all: $(writing) plots
 	${LATEXMK} thesis.tex
 
 clean: 

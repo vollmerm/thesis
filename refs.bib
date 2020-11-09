@@ -835,3 +835,49 @@ month = {01},
 pages = {182-188},
 title = {Transforming Programs to Eliminate Intermediate Structures.}
 }
+@inproceedings{flattening-trees,
+author="Keller, Gabriele
+and Chakravarty, Manuel M. T.",
+editor="Pritchard, David
+and Reeve, Jeff",
+title="Flattening trees",
+booktitle="Euro-Par'98 Parallel Processing",
+year="1998",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="709--719",
+abstract="Nested data-parallelism can be efficiently implemented by mapping it to flat parallelism using Blelloch {\&} Sabot's flattening transformation. So far, the only dynamic data structure supported by flattening are vectors. We extend it with support for user-defined recursive types, which allow parallel tree structures to be defined. Thus, important parallel algorithms can be implemented more clearly and efficiently.",
+isbn="978-3-540-49920-6"
+}
+@inproceedings{data-parallel-haskell,
+author = {Chakravarty, Manuel M. T. and Leshchinskiy, Roman and Peyton Jones, Simon and Keller, Gabriele and Marlow, Simon},
+title = {Data Parallel Haskell: A Status Report},
+year = {2007},
+isbn = {9781595936905},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/1248648.1248652},
+doi = {10.1145/1248648.1248652},
+abstract = {We describe the design and current status of our effort to implement the programming model of nested data parallelism into the Glasgow Haskell Compiler. We extended the original programming model and its implementation, both of which were first popularised by the NESL language, in terms of expressiveness as well as efficiency. Our current aim is to provide a convenient programming environment for SMP parallelism, and especially multicore architectures. Preliminary benchmarks show that we are, at least for some programs, able to achieve good absolute performance and excellent speedups.},
+booktitle = {Proceedings of the 2007 Workshop on Declarative Aspects of Multicore Programming},
+pages = {10–18},
+numpages = {9},
+location = {Nice, France},
+series = {DAMP '07}
+}
+@inproceedings{nested-data-parallelism,
+author = {Blelloch, Guy E. and Hardwick, Jonathan C. and Chatterjee, Siddhartha and Sipelstein, Jay and Zagha, Marco},
+title = {Implementation of a Portable Nested Data-Parallel Language},
+year = {1993},
+isbn = {0897915895},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/155332.155343},
+doi = {10.1145/155332.155343},
+abstract = {This paper gives an overview of the implementation of NESL, a portable nested data-parallel language. This language and its implementation are the first to fully support nested data structures as well as nested data-parallel function calls. These features allow the concise description of parallel algorithms on irregular data, such as sparse matrices and graphs. In addition, they maintain the advantages of data-parallel languages: a simple programming model and portability. The current NESL implementation is based on an intermediate language called VCODE and a library of vector routines called CVL. It runs on the Connection Machine CM-2, the Cray Y-MP C90, and serial machines. We compare initial benchmark results of NESL with those of machine-specific code on these machines for three algorithms: least-squares line-fitting, median finding, and a sparse-matrix vector product. These results show that NESL's performance is competitive with that of machine-specific codes for regular dense data, and is often superior for irregular data.},
+booktitle = {Proceedings of the Fourth ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming},
+pages = {102–111},
+numpages = {10},
+location = {San Diego, California, USA},
+series = {PPOPP '93}
+}
