@@ -1,9 +1,3 @@
-% \mav{Briefly introduce Gibbon again}
-
-% \mav{Make clear that the Gibbon compiler is a collaborative project, of which I was one
-%   member, though my contributions to it are major (wording?) so in this section I'll use
-%   a lot of ``we''}
-
 \section{Converting Functional Programs to the Location Calculus}\label{sec:infer-local}
 
 \ourcalc{} captures a notion of computation over (mostly) serialized data,
@@ -62,11 +56,6 @@ for example, the {\em unannotated} examples we've seen in this paper.
   datatypes, such that a list of closures could be serialized in a dense
   representation.)}
 
-%% \mav{Using multiple representations for the same type in the same program is an area
-%% for future study.
-%% \Secref{sec:eval} includes the multi-pass program \il{repmax}
-%% where one pass incurs overhead to satisfy the representation needs of another.
-%
 
 \paragraph{Implementing \lamadt}
 The compiler must perform a variant of {\em region
@@ -466,7 +455,6 @@ rightmost tr =
       -> rightmost [@\locreg{l_{b}}{r_1}@] *ran
 \end{code}
 \mav{TODO: Clarify notation for using RAN pointers}
-% \mav{TOOD: Make the `read RAN and then call rightmost with it' step explicit in the example.}
 
 
 %% That's because it never uses the right child of the tree, which it cannot reach
@@ -620,18 +608,6 @@ $\locreg{l_c}{r}$, using a new \il{return} form in the IR.
 In this stage, the compiler converts programs from \ourcalc{} into \lamcur{}, switching to
 imperative cursor manipulation.
 %
-%% Unlike previous published techniques,
-%% \ourcalc{} makes this step entirely type-directed and relatively
-%% straightforward.
-%% %
-%% % \item \textbf{To-Cursors}:
-%% %% Each function is further transformed to remove normal function argument bindings
-%% %% and pattern-match variable bindings. The threaded-through locations from the
-%% %% previous step become \emph{cursors}, and the program works imperatively on these
-%% %% cursors.
-%% %
-%% %% {Cursorize}
-%% %% \mav{Probably has too much in common with the ECOOP17 paper.}
 At this stage, location arguments and return values turn into first-class cursor
 values (pointers into memory buffers representing regions).  The primitive
 operations on cursors read or write one atomic value, and advance the cursor to
@@ -698,11 +674,13 @@ binary tree data type we have been using is given in \Figref{fig:linpacktree},
 and an interface for manipulating general packed data is given in
 \figref{fig:lininterface}.
 
-Linear Haskell syntax.
+The code in this section uses the experimental linear types extension to
+Haskell. With this extension, function types with $\multimap$ are linear
+functions, while ordinary arrows remain ordinary arrows. A linear function
+is constrained to consume its argument exactly once. The \il{Ur} data type
+is short for \emph{unrestricted}, and is similar to $!$ in linear logic.
 
-Explanation of example.
-
-\mav{Give basic overview of Linear Haskell syntax used here, like Ur.}
+\todo{Explanation of example.}
 
 \mav{Paraphrase explanation from ECOOP and/or Linear Haskell papers}
 
