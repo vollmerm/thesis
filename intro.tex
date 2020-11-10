@@ -468,10 +468,15 @@ languages~\cite{streamit,wavescript-nsdi}---or restricted languages such as
 XPath~\cite{xpath-streams}---that generate efficient computations over data
 streams.
 %
-These are somewhat related, but \ourcalc{} differs in targeting general
-purpose recursive functions over algebraic datatypes.
+StreamIt~\cite{streamit}, for example, is a programming language designed for
+high-performance streaming applications. It has an optimizing compiler that is
+able to perform stream-specific optimizations and generate code that in some
+cases rivals the performance of hand-optimized assembly code.
 
-\todo{Include brief overview of XPath and Stream-It/WaveScript.}
+These systems are somewhat related, but Gibbon and \ourcalc{} differ in
+targeting general purpose recursive functions over algebraic datatypes.
+
+% \todo{Include brief overview of XPath and Stream-It/WaveScript.}
 
 %
 %% In this category, the main published approach is our prior work on Gibbon~\cite{ecoop17-gibbon},
@@ -557,7 +562,7 @@ avoidance of pointer indirection. Other spatial locality
 work~\cite{Truong1998,Lattner2005,Chilimbi1999a} has similar effects and
 limitations to cache-conscious structure layout.
 
-One exception is Chilimbi et al.'s work on {\em automatic structure
+One exception is Chilimbi et al.'s work on \emph{automatic structure
 splitting}~\cite{Chilimbi1999b}, where objects are transformed into split
 representations, allowing hot fields from multiple objects to be co-located on
 a single cache line while those objects' cold fields are placed elsewhere.
@@ -611,7 +616,7 @@ using idiomatic traversal algorithms, relying on the compiler to synthesize
 the packed representation as well as the algorithm to traverse that
 representation.
 
-Similar {\em ad hoc} layout transformations have recently been pursued in the
+Similar \emph{ad hoc} layout transformations have recently been pursued in the
 context of vectorization~\cite{Meyerovich2011,ren13cgo,ren14taco}. Meyerovich
 et al. discuss different linearization schemes that can promote packed SIMD
 loads and stores, improving vectorization efficiency~\cite{Meyerovich2011}.

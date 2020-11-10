@@ -1031,8 +1031,7 @@ size [@\locreg{l}{r}@] t = case t of
               Node (a : @\tyatlocreg{Tree}{l_a}{r}@) (b : @\tyatlocreg{Tree}{l_b}{r}@)
                -> (size [@\locreg{l_a}{r}@] a) + (size [@\locreg{l_b}{r}@] b)
 \end{code}
-\caption{\ourcalc{} function computing the size of a binary tree}
-\label{fig:sizefunc}
+\caption{\ourcalc{} function computing the size of a binary tree}\label{fig:sizefunc}
 \end{figure}
 %
 However, even though the recursive calls in the \il{Node} case can
@@ -1168,11 +1167,21 @@ child task are merged into the corresponding environments in
 the parent task. Finally, the results are wired together using
 indirections, as covered in~\secref{subsec:indirections}.
 
+A key point is that indirections are necessary here for parallelism to occur,
+but if parallelism is only desired in certain parts of a program rather than at
+all possible opportunities, then indirections are only necessary at those points
+in the program where actual parallelism occurs. In a recursive program where
+parallelism is desired only up to a certain depth, data representation is
+pointer-based only insofar as parallelism is needed, and both data
+representation and control flow ``bottom out'' to sequential at a certain point.
+That is, granularity control in the data mirrors traditional
+granularity control in parallel task scheduling.
+
 To make parallel \ourcalc{} practical when adding it to Gibbon, it was
 necessary to add \il{spawn} and \il{sync} forms to the language, so
-that it is explicit where parallelism should be exploited, but these
-annotations are not strictly necessary in the semantics of
+that it is explicit where parallelism should be exploited, even though these
+annotations are not strictly necessary for correctness in the semantics of
 parallel \ourcalc{}.
-%
+
 A thorough evaluation of the performance of parallel \ourcalc{} is
 in~\secref{subsec:parallelbench}.
