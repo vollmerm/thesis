@@ -201,6 +201,85 @@
 
 \newcommand{\emptytenv}{\emptyset}
 
+
+%% Region-Parallel transitions
+\newcommand{\transformsto}{\longrightarrow}
+\newcommand{\Indr}{I}
+\newcommand{\trdatadecl}{Tr-DataDecl}
+\newcommand{\dregparsteptask}{D-RegionPar-Step}
+\newcommand{\dregparletexppar}{D-RegionPar-Let-Fork}
+\newcommand{\dregparletexpseq}{D-RegionPar-Let}
+\newcommand{\dregparletlocafter}{D-RegionPar-LetLoc-After}
+\newcommand{\dregparletlocafternewreg}{D-LetLoc-After-NewReg}
+\newcommand{\dregparcasejoin}{D-RegionPar-Case-Join}
+\newcommand{\dregparcase}{D-RegionPar-Case}
+\newcommand{\dregpardatacon}{D-RegionPar-DataConstructor}
+\newcommand{\dregpardataconjoin}{D-RegionPar-DataConstructor-Join}
+\newcommand{\dregparletlocstart}{D-RegionPar-LetLoc-Start}
+\newcommand{\dregparletloctag}{D-RegionPar-LetLoc-Tag}
+\newcommand{\dregparletexp}{D-RegionPar-Let-Expr}
+\newcommand{\dregparletval}{D-RegionPar-Let-Val}
+\newcommand{\dregparapp}{D-RegionPar-App}
+\newcommand{\dregparletregion}{D-RegionPar-LetRegion}
+
+%%
+\newcommand{\wftask}{\ensuremath{\vdash_{wf_{task}}}}
+%\newcommand{\update}[3]{\ensuremath{#1+\{#2 \mapsto #3\}}}
+
+\newcommand{\nfofi}{\keywd{Nf}}
+\newcommand{\incri}{\keywd{Incr}}
+\newcommand{\followinm}{\keywd{Deref}}
+\newcommand{\rorngi}[2]{[#1, #2)}
+\newcommand{\rorngh}{\keywd{RORngH}}
+\newcommand{\storelookupone}[3]{\hat{#1}(#2,#3)}
+\newcommand{\maplookupone}[2]{\hat{#1}(#2)}
+\newcommand{\advancei}{\keywd{After}}
+\newcommand{\mergeh}{\keywd{MergeH}}
+\newcommand{\mergem}{\keywd{MergeM}}
+\newcommand{\merges}{\keywd{MergeS}}
+\newcommand{\tie}{\keywd{Tie}}
+\newcommand{\linkfields}{\keywd{LinkFields}}
+
+%\newcommand{\ewitnesstext}{\ensuremath{\vdash_{\textit{ew}}}}
+% \newcommand{\ewitness}[4]{\ensuremath{#1;#2;#3 \ewitnesstext #4}}
+% \newcommand{\tietext}{\ensuremath{\vdash_{\textit{tie}}}}
+% \newcommand{\storewf}[7]{\ensuremath{#1;#2;#3;#4,#5 \vdash_{wf} #6;#7}}
+% \newcommand{\storewfcfa}[4]{\ensuremath{#1,#2 \vdash_{wf_{cfc}} #3;#4}}
+% \newcommand{\storewfca}[5]{\ensuremath{#1;#2,#3 \vdash_{wf_{ca}} #4;#5}}
+% \newcommand{\storewftasks}[1]{\ensuremath{\vdash_{wf_{tasks}} #1}}
+
+% \newcommand{\tcfun}{\ensuremath{\vdash_{fun}}}
+% \newcommand{\tcpat}{\ensuremath{\vdash_{pat}}}
+% \newcommand{\tcts}{\ensuremath{\vdash_{ts}}}
+
+\newcommand{\parmergemenv}[2]{\mergem(#1, #2)}
+\newcommand{\parmergestor}[2]{\merges(#1, #2)}
+\newcommand{\parmergetask}[2]{\keywd{MergeT}(#1, #2)}
+
+\newcommand{\concretelocp}[3]{\ensuremath{\langle #1, #2 \rangle ^{#3}}}
+
+% \newcommand{\ind}{\keywd{i}}
+% \newcommand{\indj}{\keywd{j}}
+%\newcommand{\heap}{\keywd{h}}
+\newcommand{\heapval}{\keywd{hv}}
+\newcommand{\TASKVAR}{\keywd{T}}
+\newcommand{\TASKSET}{\mathbb{T}}
+\newcommand{\SEQSTATE}{\keywd{t}}
+
+
+\newcommand{\concreteind}[1]{#1}
+\newcommand{\svind}[1]{#1\circ}
+\newcommand{\svindplusoff}[2]{#1 + #2}
+\newcommand{\indbef}[1]{#1\diamond}
+\newcommand{\concretelocvar}{\keywd{cl}}
+\newcommand{\fut}[1]{\text{fut}\;#1}
+\newcommand{\concretelocbefore}[1]{\gramwd{before}\; #1}
+\newcommand{\indivar}[1]{\gramwd{i-var}\; #1}
+\newcommand{\concretelocvardiamond}{\keywd{\concretelocvar\diamond}}
+\newcommand{\indirection}[2]{\ensuremath{\text{\&}(#1,#2)}}
+\newcommand{\indirectionvar}{hr}
+
+
 %% Formatting
 
 %% fdtools, harpoon are packages that provide this feature, but

@@ -87,8 +87,7 @@ consuming recursion with the deserialization loop).
 %% We return to this use-case in \secref{sec:impl-hical}.
 
 \paragraph{Allocating to output regions}
-%
-% \mav{buildtree-shared?}
+
 Now that we have seen how data constructor applications are parameterized by
 locations, let us look at a more complex example than those of the prior section.
 Consider \lstinline[mathescape]{buildtree}, which constructs the same trees consumed by \lstinline[mathescape]{sum}
@@ -993,32 +992,32 @@ data T = K1 T (Ind T) | K2 T (Offset T) | K3 T
 \end{code}
 Type annotations would also be the place to express {\em permutations} on fields
 that should be serialized in a different order, (e.g., postorder).  But it is
-equivalent to generating \ourcalc with reordered fields in the source program.
+equivalent to generating \ourcalc{} with reordered fields in the source program.
 
 \subsection{Parallelism}\label{subsec:parallelism}
 
 So far, this section has presented a language for performing tree traversals
-over serialized data (with some potential indirection). This data representation
+over serialized data (with some potential indirection). While this data representation
 strategy works well for sequential programs, there is an intrinsic tension if we
 want to parallelize these tree traversals. As the name implies, efficiently
-serialized data must often be read serially. To change that, first, enough {\em
-indexing} data must be left in the representation in order for parallel tasks to
+serialized data must often be read serially. To change that, first, enough
+\emph{indexing} data must be left in the representation in order for parallel tasks to
 ``skip ahead'' and process multiple subtrees in parallel. Second, the allocation
 areas must be bifurcated to allow allocation of outputs in parallel.
 
-Here I will outline how \ourcalc{} can be extended to support parallel
-computation. In this strategy, follows function: data representation is
-random-access only insofar as parallelism is needed, and both data
-representation and control flow ``bottom out'' to sequential pieces of work.
-That is, granularity-control in the data mirrors traditional granularity-control
-in parallel task scheduling.
+% Here I will outline how \ourcalc{} can be extended to support parallel
+% computation. In this strategy, form follows function: data representation is
+% random-access only insofar as parallelism is needed, and both data
+% representation and control flow ``bottom out'' to sequential pieces of work.
+% That is, granularity-control in the data mirrors traditional granularity-control
+% in parallel task scheduling.
 
-We implemented this in the Gibbon compiler
-and found that it performed as well or better than parallel GHC and parallel
-MLton on a variety of benchmarks. When utilizing 18 cores, our geomean speedup
-is $1.87\times$ and $3.16\times$ over parallel MLton and GHC, respectively.
-A more thorough evaluation of the performance of parallel \ourcalc{} is
-in~\secref{subsec:parallelbench}.
+% We implemented this in the Gibbon compiler.
+% % and found that it performed as well or better than parallel GHC and parallel
+% % MLton on a variety of benchmarks. When utilizing 18 cores, our geomean speedup
+% % is $1.87\times$ and $3.16\times$ over parallel MLton and GHC, respectively.
+% A thorough evaluation of the performance of parallel \ourcalc{} is
+% in~\secref{subsec:parallelbench}.
 
 There are several opportunities for parallelism in \ourcalc{} programs.
 %
@@ -1033,7 +1032,7 @@ size [@\locreg{l}{r}@] t = case t of
               Node (a : @\tyatlocreg{Tree}{l_a}{r}@) (b : @\tyatlocreg{Tree}{l_b}{r}@)
                -> (size [@\locreg{l_a}{r}@] a) + (size [@\locreg{l_b}{r}@] b)
 \end{code}
-\caption{\ourcalc function computing the size of a binary tree}
+\caption{\ourcalc{} function computing the size of a binary tree}
 \label{fig:sizefunc}
 \end{figure}
 %
@@ -1084,11 +1083,9 @@ This is crucial in \ourcalc{} programs, where large, serialized data
 frequently occupy only a small number of regions, and yet there are
 opportunities to exploit parallelism in their construction.
 %
-Consider the \il{buildtree} program, which creates a binary tree of a
-given size \il{n} in a given region \il{r}.
+Consider the \il{buildtree} function, mentioned earlier in this chapter, which
+creates a binary tree of a given size \il{n} in a given region \il{r}.
 %
-\mav{reference buildTree code here}
-% 
 If we want to access the parallelism between the recursive calls,
 we need to break the data dependency that the right branch has on
 the left.
@@ -1109,12 +1106,74 @@ Unfortunately, this approach would introduce safety issues, such as
 incorrect size information, of exactly the kind that \ourcalc{}
 is designed to prevent.
 %
-Instead, we explore an approach that is safe-by-construction and
-efficient, as we explain next.
+Instead, here I will explore an approach that is safe-by-construction and
+efficient.
+%
+% Parallel \ourcalc{} overview continues here.
+%
+A full formalization and proof of type safety for parallel \ourcalc{}
+is future work, so this section will outline a sketch of
+how the operational semantics of \ourcalc{} can be extended
+to safely allow parallel execution.
 
-Parallel \ourcalc{} overview continues here.
 
-\mav{Insert brief overview of parallel local semantics}
 
-An evaluation of the implementation of parallel \ourcalc{} is given in
-\secref{subsec:parallelbench}.
+The expression syntax is the same, and no changes are necessary to the type system.
+The operational semantics do require some changes, most notably the addition
+of a richer form of indexing in regions.
+
+
+% \begin{displaymath}
+%   \begin{aligned}
+%     \textup{Store} && \STOR && \gramdef & \set{\reg_1 \mapsto \heap_1 , \; \ldots \; , \reg_{n} \mapsto \heap_{n}} \\
+%     \textup{\new{Heap Values}} && \heapval && \gramdef & \DC \gramor \indirection{\reg}{\concreteind{\ind}} \\
+%     \textup{Heap} && \heap && \gramdef & \set{\concreteind{\ind}_1 \mapsto \heapval_1 , \; \ldots \; , \concreteind{\ind}_{n} \mapsto \heapval_{n}}\\
+%     \textup{Location Map} && \MENV && \gramdef & \set{\locreg{\loc}{\reg_1}_1 \mapsto \concretelocvar{}_1 , \; \ldots \; , \locreg{\loc}{\reg_n}_n \mapsto \concretelocvar{}_n} \\
+%     \textup{Sequential States} && \SEQSTATE && \gramdef & \STOR ; \MENV ; \EXPR \\
+%     \textup{Parallel Tasks} && \TASKVAR && \gramdef & (\hTYP, \concretelocvar{}, \SEQSTATE) \\
+%     \textup{Task Set} && \TASKSET && \gramdef & \set { \TASKVAR_1, \ldots, \TASKVAR_n } \\
+%     \textup{Concrete Locations} && \concretelocvar{} && \gramdef & \concreteloc{\reg}{\indbef{\ind}}{\loc}\\
+%     \textup{\new{Extended Region Indices}} && \indbef{\ind}, \indbef{\indj} && \gramdef & \concreteind{\ind} \gramor \indivar{\ind} \gramor \indirection{\reg}{\concreteind{\ind}}
+%   \end{aligned}
+% \end{displaymath}
+
+Take, as an example, a \ourcalc{} computation involving a binary tree, where the
+left child \il{a} at location $\locreg{\loc_a}{\reg}$ is to be computed in
+parallel with the right child \il{b}.
+Each task has its own private view of memory, which is realized by
+giving the child and parent task copies of the store $\STOR$ and
+location map $\MENV$.
+%
+These copies differ in one way, however: each sees a different mapping
+for the starting location of \il{a}. %, namely $\locreg{\loc_a}{\reg}$.
+%
+The child task sees the mapping
+$\locreg{\loc_a}{\reg} \mapsto \concreteloc{\loc_a}{1}{}$, which
+is the ultimate starting address of \il{a} in the heap.
+
+The parent task sees a different mapping for $\locreg{\loc_a}{\reg}$,
+namely $\concreteloc{\reg}{\indivar{1}}{}$.
+%
+This location is an \emph{ivar index}: it behaves exactly like an I-Var~\cite{IStructures},
+and, in our example, stands in for the completion of the memory being
+filled for \il{a}, by the child task.
+%
+Any expression in the body of the let expression that tries to read
+from this location blocks on the completion of the child task.
+%
+When \il{a} is used, it will force the parent task to join with
+its child task. The ivar index $\concreteloc{\reg}{\indivar{1}}{}$
+will be substituted with $\concreteloc{\loc_a}{1}{}$, and
+all the new entries in the location map and store map of the
+child task are merged into the corresponding environments in
+the parent task. Finally, the results are wired together using
+indirections, as covered in~\secref{subsec:indirections}.
+
+To make parallel \ourcalc{} practical when adding it to Gibbon, it was
+necessary to add \il{spawn} and \il{sync} forms to the language, so
+that it is explicit where parallelism should be exploited, but these
+annotations are not strictly necessary in the semantics of
+parallel \ourcalc{}.
+%
+A thorough evaluation of the performance of parallel \ourcalc{} is
+in~\secref{subsec:parallelbench}.

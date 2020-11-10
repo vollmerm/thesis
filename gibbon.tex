@@ -662,7 +662,8 @@ relationship to \lamcur{} and how it may be expressed in Linear
 Haskell~\cite{linear-haskell}. This initially appeared in~\cite{ecoop17-gibbon}
 as a typed intermediate language for an earlier version of the Gibbon compiler,
 and subsequently was adapted in~\cite{linear-haskell} as an example use case for
-linear types in Haskell.
+linear types in Haskell. In this section I borrow the presentation style
+and examples from the latter.
 
 The basic idea is that cursors are \emph{indexed} by a list of types.
 Write cursors are indexed by a list of types that corresponds to the values
@@ -674,15 +675,41 @@ binary tree data type we have been using is given in \Figref{fig:linpacktree},
 and an interface for manipulating general packed data is given in
 \figref{fig:lininterface}.
 
+This interface is \emph{type-safe} in the sense that it provides a layer
+of abstraction for consuming and producing serialized data such that
+a program only reads byte-ranges at the size and type they were originally
+written. For this to work, the \il{Packed} type must be abstract, so
+a client working with a \il{Packed Tree} is not privy to the memory
+layout of its serialization.
+
 The code in this section uses the experimental linear types extension to
 Haskell. With this extension, function types with $\multimap$ are linear
 functions, while ordinary arrows remain ordinary arrows. A linear function
 is constrained to consume its argument exactly once. The \il{Ur} data type
 is short for \emph{unrestricted}, and is similar to $!$ in linear logic.
 
-\todo{Explanation of example.}
+Because a client does not have direct access to the serialized bytes,
+consuming a serialized binary tree is done with the help of a pattern
+matching combinator like \il{caseTree} in \Figref{fig:linpacktree}. This
+function takes the serialized tree and two continuations (one for if the
+tree is a leaf, and one for if it is a node), and the types ensure that
+the continuations are invoked on packed trees with appropriate structure
+(the leaf case expects to find an \il{Int}, the node case expects to
+find a \il{Tree} and then another \il{Tree}).
+%
+In \Figref{fig:linsumleaves}, \il{caseTree} is used to fold over a binary
+tree and sum the values of all the leaves. Note that the packed values are linear,
+and must be explicitly threaded through different recursive function applications
+in the \il{go} helper function.
 
-\mav{Paraphrase explanation from ECOOP and/or Linear Haskell papers}
+Reading from \il{Packed} values and writing to \il{Needs} values, as shown in
+\Figref{fig:lininterface}, relies on type-level lists: reading an \il{a} from
+a value of type \il{Packed (a : r)} yields a pair \il{(a, Packed r)},
+and writing a value of \il{a} to a value of \il{Needs (a : r)} yields
+\il{Needs r}. Once a packed value has had all of its values read, it can
+be consumed with \il{done}, and once a needs cursor has had all its values
+written it can be cast to a packed value with \il{finish}. Linearity
+ensures that everything is read and written in the proper order.
 
 \begin{figure}
 \begin{code}
@@ -692,11 +719,8 @@ unpack :: Packed [Tree] ->. Tree
 caseTree :: Packed (Tree : r) ->.
             (Packed (Int : r) ->. a) ->
             (Packed (Tree : Tree : r) ->. a) -> a
--- unsafe/internal, write tags
-startLeaf :: Needs (Tree : r) t ->. Needs (Int : r) t
-startBranch :: Needs (Tree : r) t ->. Needs (Tree : Tree : r) t
 \end{code}
-\caption{An interface for safely packing and unpacking a binary tree
+\caption{A type-safe, read-only interface for computing with serialized binary trees
   in Linear Haskell}
 \label{fig:linpacktree}
 \end{figure}
@@ -725,6 +749,25 @@ sumLeaves p = fst (go p)
   binary tree}
 \label{fig:linsumleaves}
 \end{figure}
+
+\begin{code}
+startLeaf :: Needs (Tree : r) t ->. Needs (Int : r) t
+startBranch :: Needs (Tree : r) t ->. Needs (Tree : Tree : r) t
+\end{code}
+%
+To safely write serialized binary trees, we need a few more building blocks.
+Two functions, \il{startLeaf} and \il{startBranch} write
+tags to bytestrings, and leave writing the rest of the fields as future
+obligations.
+
+
+We can use these to write a function, \il{mapLeaves} (in \Figref{fig:linsumleaves}),
+which maps a non-linear function of type \il{(Int -> Int)} over a packed
+binary tree. Bernardy et al.~\cite{linear-haskell} benchmarked this function,
+and found that GHC produced code that performed no Haskell heap allocations,
+showing that this style of programming can be used effectively to program
+efficiently with serialized data.
+
 \begin{figure}
 \begin{code}
 mapLeaves :: (Int -> Int) -> Packed [Tree] ->. Packed [Tree]
@@ -742,10 +785,9 @@ mapLeaves fn pt = newBuffer (extract . go pt)
   binary tree}
 \label{fig:linsumleaves}
 \end{figure}
-\mav{Copy the types from the ECOOP paper and/or the Linear Haskell paper.}
-\mav{Reference this in the Gibbon chapter when we get to the cursor-passing
-  language.}
 
+This approach is currently \emph{not} used in the cursor-passing intermediate language
+in Gibbon. It is future work to adopt something like this inside the Gibbon compiler.
 
 \subsection{Runtime System}\label{subsec:rts}
 % ================================================================================
