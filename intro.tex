@@ -442,9 +442,13 @@ with three \emph{kinds}: types, which describe the value that an expression may
 evaluate to; effects, which describe the side-effects that an expression may
 perform; and regions, which describe the area of the store in which side-effects
 may occur.
-
-Effect systems~\cite{effect-types}, Cyclone~\cite{cyclone-pldi}, Region
-calculi~\cite{mlkit-retrospective}.
+%
+This research continued in many forms, such as region
+calculi~\cite{mlkit-retrospective, regioncalcs, cyclone-pldi}, where regions in
+types were used to manage memory allocation and deallocation. \ourcalc{}
+builds on these systems, and borrows the notion of regions, while adding
+an additional notion of \emph{symbolic locations} on top of regions to
+track the relative location of values inside regions.
 
 Another commonly discussed way to manage resources, and particularly memory,
 using types in functional programs is the use of \emph{linear

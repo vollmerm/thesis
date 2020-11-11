@@ -1363,18 +1363,23 @@ take less than 440ms, but run together take 480ms.  Yet the latter time is still
 
 \subsection{Data Processing Benchmarks}
 
-\mav{Overview of how this technique can be applied to data processing programs.}
-\mav{If data to be processed is already serialized then this avoids marshaling cost.}
-\mav{If data to be processed is in some other format then we can still be faster by
-  transforming the data into a format that is more efficient to process (like the JSON
-  to byte array transformation necessary for the Twitter benchmark). And in these cases
-  it is often still faster than libraries that are meant to process the data in its
-  original form.}
-
-
-\subsubsection{Twitter JSON Benchmark}
+% \mav{Overview of how this technique can be applied to data processing programs.}
+% \mav{If data to be processed is already serialized then this avoids marshaling cost.}
+% \mav{If data to be processed is in some other format then we can still be faster by
+%   transforming the data into a format that is more efficient to process (like the JSON
+%   to byte array transformation necessary for the Twitter benchmark). And in these cases
+%   it is often still faster than libraries that are meant to process the data in its
+%   original form.}
 
 Beyond microbenchmarks, Gibbon has been evaluated on more realistic benchmarks.
+In the case of data processing, if data is already serialized then programs
+may avoid the marshaling cost by operating directly on serialized data,
+and if programs need to be converted from some other format it may still be
+benefician to process that data into a dense, serialized form before
+processing rather than processing the data in its original form
+
+\paragraph{Twitter JSON Benchmark}
+
 Here, we take a look at Twitter metadata consisting of user ID's and hashtags
 for all tweets posted in 1 month, and count the occurrences of the hashtag
 ``cats'' in this dataset. The goal is to replicate and extend the CNF experiment
@@ -1425,7 +1430,7 @@ It processes the 9.1M tweets in 0.39s.
   \label{fig:twitter_slowdown_plot}
 \end{figure}
 
-\subsubsection{Point Correlation}
+\paragraph{Point Correlation}
 
 Point correlation  is a well-known algorithm used in data mining~\cite{gray2000n}:
 given a set of points in a k-dimensional space, point correlation computes the number of points in that space  that lie within a
@@ -1607,7 +1612,7 @@ passes before finally generating assembly code for a simple abstract machine.
 The input grammar of the compiler is given
 in~\figref{fig:coursecompilergrammar}, and the structure of the compiler is as
 follows, roughly matching a few of the passes described
-in~\cite{compilers-textbook}:
+in the open source textbook Essentials of Compilation~\footnote{\url{https://github.com/IUCompilerCourse/Essentials-of-Compilation}}:
 %
 \begin{enumerate}
   \item \textbf{uniquify}: rename all variables to be unique across the program
@@ -1727,25 +1732,26 @@ $\ldots$
 
 To measure the overheads of compiling parallel allocations using
 fresh regions and indirection pointers, we compare our single-core performance
-against the original, sequential LoCal implementation.
+against the original, sequential \ourcalc{} implementation in the Gibbon compiler.
 %
-LoCal is also a good sequential baseline for performing speedup calculations
+\ourcalc{} is also a good sequential baseline for performing speedup calculations
 since its programs operate on serialized heaps, and
 as shown in prior work, are significantly faster than their pointer-based counterparts.
 %
-Note that prior work \cite{Gibbon} compared sequential constant factor performance
-against a range of compilers including GCC and Java.  Since LoCal
+Note that this chapter previously compared sequential constant factor performance
+against a range of language implementations and compilers.
+Since Gibbon generally
 outperformed those compilers in sequential tree-traversal workloads, we focus
-here on comparing against LoCal for sequential performance.
+here on comparing against \ourcalc{} for sequential performance.
 
 We also measure the scaling properties of our implementation by comparing its
 performance to other programming languages and systems
 that support efficient parallelism for recursive, functional programs
---- \MPL{} \footnote{https://github.com/MPLLang/mpl} \cite{MPL},
-OCaml \cite{OCaml}, and GHC.
+--- \MPL{}~\footnote{https://github.com/MPLLang/mpl}~\cite{MPL},
+OCaml~\cite{OCaml}, and GHC.
 %
-\MPL{} (an extension of MLton \footnote{http://www.mlton.org})
-is a whole program optimizing compiler for the Standard ML \cite{StandardML}
+\MPL{} (an extension of MLton~\footnote{http://www.mlton.org})
+is a whole program optimizing compiler for the Standard ML~\cite{StandardML}
 programming language,
 %
 and it supports nested fork/join parallelism, and generates extremely efficient code.
@@ -1760,10 +1766,10 @@ general purpose functional languages Objective Caml and Haskell respectively.
 %% lsb-release -a -- OS
 
 The experiments in this section are performed on a 48 core server made up of
-2 x 2.9 GHz 24 core Intel Xeon Platinum 8268 processors, with 1.5TB of memory,
+2 $\times$ 2.9 GHz 24 core Intel Xeon Platinum 8268 processors, with 1.5TB of memory,
 and running Ubuntu 18.04.
 %
-\note{mention numactl.}
+%\note{mention numactl.}
 %
 Each benchmark is run 9 times, and the median is reported.
 %
@@ -1786,7 +1792,7 @@ the monad-par\cite{monad-par} library for parallelism.
 
 \newcommand{\numbenchmarks}{\Red{10} }
 
-We use the following set of of \numbenchmarks \csk{udpate this number before submission.} benchmarks to evaluate performance.
+We use the following set of of 10 benchmarks to evaluate performance.
 %
 For GHC, we use strict datatypes in benchmarks which generally offers the
 same or better performance and avoids problematic interactions between
@@ -1930,6 +1936,13 @@ their implementations written using C/C++, as shown by the in-place merge sort
 benchmark.
 
 \Figref{fig:benchmark-results} shows the full results of comparing performance
-of programs written in parallel \ourcalc{} to the other implementations.
-
-\note{Explain more.}
+of programs written in parallel \ourcalc{} to the other implementations. In
+general, we found that parallel \ourcalc{} programs performed as well or better
+than parallel GHC and parallel MLton on a variety of benchmarks. When utilizing
+18 cores, our geomean speedup is $1.87\times$ and $3.16\times$ over parallel
+MLton and GHC, respectively.
+%
+This demonstrates that \ourcalc{} can be extended with
+parallelism in a way that preserves the excellent performance of
+ordinary \ourcalc{} while also scaling well to multiple cores.
+%\note{Explain more.}
