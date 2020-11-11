@@ -995,7 +995,7 @@ equivalent to generating \ourcalc{} with reordered fields in the source program.
 
 \subsection{Parallelism}\label{subsec:parallelism}
 
-So far, this section has presented a language for performing tree traversals
+So far, this chapter has presented a language for performing tree traversals
 over serialized data (with some potential indirection). While this data representation
 strategy works well for sequential programs, there is an intrinsic tension if we
 want to parallelize these tree traversals. As the name implies, efficiently
@@ -1003,6 +1003,9 @@ serialized data must often be read serially. To change that, first, enough
 \emph{indexing} data must be left in the representation in order for parallel tasks to
 ``skip ahead'' and process multiple subtrees in parallel. Second, the allocation
 areas must be bifurcated to allow allocation of outputs in parallel.
+Thankfully, the extension discussed previously about adding \emph{indirections}
+helps provide solutions to these problems, but a bit of care has to be taken
+when updating the language semantics to ensure that parallel execution is safe.
 
 % Here I will outline how \ourcalc{} can be extended to support parallel
 % computation. In this strategy, form follows function: data representation is
