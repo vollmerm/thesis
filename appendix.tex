@@ -323,7 +323,7 @@ of data constructor $\DC$.
 \begin{lemma}[Substitution lemma]
   \label{lemma:substitution}
   \begin{align*}
-  \text{If} \quad & \TENV \cup \set{\overharpoon{\var_1} \mapsto \overharpoon{\TYP_1} \ensuremath{@} \overharpoon{\locreg{\loc_1}{\reg_1}}, \ldots, \overharpoon{\var_n} \mapsto  \overharpoon{\TYP_n} \ensuremath{@} \overharpoon{\locreg{\loc_n}{\reg_n}}}; \SENV; \CENV; \AENV; \NENV \vdash \AENV'; \NENV'; \EXPR : \tyatlocreg{\TYP}{\loc}{\reg}\\
+  \text{If} \quad & \TENV \cup \set{\overharpoon{\var_1} \mapsto \overharpoon{\TYP_1} \ensuremath{@} \overharpoon{\locreg{\loc_1}{\reg_1}}, \ldots, \overharpoon{\var_n} \mapsto  \overharpoon{\TYP_n} \ensuremath{@} \overharpoon{\locreg{\loc_n}{\reg_n}}}; \SENV; \CENV; \AENV; \NENV \vdash \AENV''; \NENV''; \EXPR : \tyatlocreg{\TYP}{\loc}{\reg}\\
   \text{and} \quad & \TENV; \SENV'; \CENV'; \AENV'; \NENV' \vdash \AENV'; \NENV'; \overharpoon{\VAL_i} : \overharpoon{\TYP_i} \ensuremath{@} \overharpoon{\locreg{\loc'_i}{\reg'_i}} \qquad \; i \in \set{1, \ldots, n}\\
   \text{then} \quad & \TENV; \SENV'; \CENV'; \AENV'; \NENV' \vdash \AENV'''; \NENV'''; \substlemmasubsts{\EXPR} : \tyatlocreg{\TYP}{\loc'}{\reg'}\\
    \text{where} \quad & \SENV = \SENV_0 \cup \set{\overharpoon{\locreg{\loc_1}{\reg_1}} \mapsto \overharpoon{\TYP_1}, \ldots, \overharpoon{\locreg{\loc_n}{\reg_n}} \mapsto \overharpoon{\TYP_n}}\\
@@ -333,7 +333,9 @@ of data constructor $\DC$.
   \text{and} \quad & \SENV' = \SENV \cup \set{\overharpoon{\locreg{\loc'_1}{\reg'_1}} \mapsto \overharpoon{\TYP_1}, \ldots, \overharpoon{\locreg{\loc'_n}{\reg'_n}} \mapsto \overharpoon{\TYP_n}}\\
   \text{and} \quad & \CENV' = \subst{\CENV}{\overharpoon{\locreg{\loc}{\reg}}}{\overharpoon{\locreg{\loc'}{\reg'}}} \subst{}{\locreg{\loc}{\reg}}{\locreg{\loc'}{\reg'}} \\
   \text{and} \quad & \AENV' = \subst{\AENV}{\overharpoon{\locreg{\loc}{\reg}}}{\overharpoon{\locreg{\loc'}{\reg'}}} \subst{}{\locreg{\loc}{\reg}}{\locreg{\loc'}{\reg'}} \subst{}{\reg}{\reg'}\\
-  \text{and} \quad & \NENV' = \subst{\NENV}{\locreg{\loc}{\reg}}{\locreg{\loc'}{\reg'}}
+  \text{and} \quad & \NENV' = \subst{\NENV}{\locreg{\loc}{\reg}}{\locreg{\loc'}{\reg'}} \\
+  \text{and} \quad & \AENV''' = \subst{\AENV''}{\overharpoon{\locreg{\loc}{\reg}}}{\overharpoon{\locreg{\loc'}{\reg'}}} \subst{}{\locreg{\loc}{\reg}}{\locreg{\loc'}{\reg'}} \subst{}{\reg}{\reg'}\\
+  \text{and} \quad & \NENV''' = \subst{\NENV''}{\locreg{\loc}{\reg}}{\locreg{\loc'}{\reg'}}
   \end{align*}
 \end{lemma}
 \begin{nproof}
