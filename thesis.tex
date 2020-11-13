@@ -180,7 +180,7 @@
   I want to thank the other members of my committee, Jeremy Siek, Sam
   Tobin-Hochstadt, and Larry Moss, for everything they have done to help me over
   the years. I also could not have gotten here without Milind Kulkarni, Chaitanya
-  Koparkar, and Laith Sakka, for their help and collaborators on the Gibbon project.
+  Koparkar, and Laith Sakka, for their help and collaboration on the Gibbon project.
 
   Early in my Ph.D., I was lucky enough to get to work with Bo Joel Svensson and
   Trevor L. McDonell while they were postdocs at IU, and I want to thank them for
@@ -193,9 +193,9 @@
   Kent, and Paulette Koronkevich. And thanks to Ambrose Bonnaire-Sergeant, for the
   fun conversations and for getting lost with me in Mumbai.
 
-  Thanks to my family for encouraging me when I was down, for always telling me
-  they're proud of me, and for politely listening when I tried to explain
-  my research.
+  Thanks to my family for supporting me, for encouraging me when I was down, for
+  always telling me they're proud of me, and for politely listening when I tried
+  to explain my research.
 
   And most of all, I want to thank my wife, Victoria Vollmer. She was the person
   who first encouraged me to go to graduate school. At the start, the plan was
@@ -224,7 +224,14 @@
 % % This page is required
 
 \begin{abstract}
-This abstract page is required. Make sure to adhere to the word count and other limits set by ProQuest. It should appear in your dissertation that is submitted to the Graduate School \emph{without} signatures.
+  % This abstract page is required. Make sure to adhere to the word count and other limits set by ProQuest. It should appear in your dissertation that is submitted to the Graduate School \emph{without} signatures.
+
+In a typical data-processing application, the representation of data in memory is distinct from its representation in a serialized form on disk. The former has pointers and an arbitrary, sparse layout, facilitating easier manipulation by a program, while the latter is packed contiguously, facilitating easier I/O. I propose a programming language, LoCal, that unifies the in-memory and on-disk representations of data. LoCal extends prior work on region calculi into a location calculus, employing a type system that tracks the byte-addressed layout of all heap values.
+% \linebreak
+%
+I present the formal semantics of LoCal and prove type safety, and show how to infer LoCal programs from unannotated source terms. Then, I demonstrate how to efficiently implement LoCal in a practical compiler that produces code competitive with hand-written C.
+\linebreak\vspace{1em}
+
 \end{abstract}
 
 \newpage
