@@ -761,7 +761,7 @@ tags to bytestrings, and leave writing the rest of the fields as future
 obligations.
 
 
-We can use these to write a function, \il{mapLeaves} (in \Figref{fig:linsumleaves}),
+We can use these to write a function, \il{mapLeaves} (in \Figref{fig:linmapleaves}),
 which maps a non-linear function of type \il{(Int -> Int)} over a packed
 binary tree. Bernardy et al.~\cite{linear-haskell} benchmarked this function,
 and found that GHC produced code that performed no Haskell heap allocations,
@@ -783,7 +783,7 @@ mapLeaves fn pt = newBuffer (extract . go pt)
 \end{code}
 \caption{A Linear Haskell function for mapping over the leaves of a packed
   binary tree}
-\label{fig:linsumleaves}
+\label{fig:linmapleaves}
 \end{figure}
 
 This approach is currently \emph{not} used in the cursor-passing intermediate language
@@ -921,11 +921,12 @@ count of any regions it points to.
 
 
 \paragraph{Comparing against prior art's memory management}
-Finally, in order to compare against other work, we also implement a technique
-for {\bf huge regions}; these are allocated as a large slab containing many
+Finally, we also implement a technique
+that we call {\bf huge regions}; these are allocated as a large slab containing many
 pages, and could be extended by mapping new virtual memory after hitting a guard
-page capping the region end.  This was the approach used by
-Gibbon~\cite{ecoop17-gibbon}.
+page capping the region end.
+% This was the approach used by
+% Gibbon~\cite{ecoop17-gibbon}.
 %
 These huge regions avoid bounds checks when writing payloads and they are
 suitable for programs with a small number of large regions (especially a single
