@@ -971,7 +971,7 @@ transforming abstract syntax trees and processing large amounts of data.
 For purposes of evaluation, a couple of other points of comparison were
 chosen, and the results will be given in this section.
 
-\subsection{Microbenchmarks}
+\subsection{Microbenchmarks}\label{subsec:microbenchmarks}
 
 Gibbon was evaluated on a series of microbenchmarks to demonstrate how it
 handles simple functions and operations on binary trees. From these results,
@@ -1524,6 +1524,10 @@ skipping the steps assembling and disassembling programs before manipulating the
 This section will discuss two benchmarks that test Gibbon's handling of programs
 that operate on serialized abstract syntax trees: a subset of a compiler for
 a simple language, and a traversal of macro-expanded Racket s-expressions.
+In each of these benchmarks, I compare Gibbon to pointer-based C, where the
+pointer-based C code is using an efficient bump allocator (rather than \texttt{malloc})
+in order to evaluate the differences in performance discounting the overhead of
+lots of small allocations for nodes.
 
 \paragraph{Racket code benchmark}
 
@@ -1578,7 +1582,7 @@ packed. We measured the last level cache reference and cache misses and found
 dramatic improvements in these for the packed approach (and modest differences
 in the number of instructions executed).
 %
-Nevertheless,the performance of pointer-based
+Nevertheless, the performance of pointer-based
 approach is good at small sizes: (1) trees are small and fit in cache, (2) the
 single-threaded workload can acquire all of the last level cache, not contending
 with other threads on the 16-core machine. The end result is that the system is
