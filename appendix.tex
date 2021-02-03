@@ -745,7 +745,7 @@ $\blacksquare$
            \ewitness{\overharpoon{\TYP'_{j+1}}}{\concreteloc{\reg}{\overharpoon{w_j}}{}}{\STOR'}{\concreteloc{\reg}{\overharpoon{w_{j+1}}}{}} \label{prf:ew-req2}
            \end{align}
            for some $\overharpoon{w}$, where
-           $\indj \in J = J' - \set{n}$, $\indj' \in J' = \set{1,\ldots,n}$, and
+           $\indj \in J = J' - \set{n}$, $\indj' \in J' = \set{1,\ldots,n}$, and\\
            $\overharpoon{\TYP'} = \kargtys(\DC)$.
            %
            To establish the above, we need
@@ -898,7 +898,7 @@ $\blacksquare$
       \begin{align*}
       \storewfcfa{\CENV}{\MENV}{\STOR'}
       \end{align*}
-      The first two proof obligations of this judgement, namely \refwellformed{sec:well-formedness-constructors}{wfconstr:constraint-start} and \refwellformed{sec:well-formedness-constructors}{wfconstr:constraint-tag}, discharge immediately, because the environments used by these
+      The first two proof obligations of this judgement, namely \refwellformed{sec:well-formedness-constructors}{wfconstr:constraint-start} and\\ \refwellformed{sec:well-formedness-constructors}{wfconstr:constraint-tag}, discharge immediately, because the environments used by these
       rules are unaffected in a data-constructor application.
       %
       The only remaining obligation is \refwellformed{sec:well-formedness-constructors}{wfconstr:constraint-after}, because that requirement is affected by the write of the constructor tag, which is reflected in the new store $\STOR'$.

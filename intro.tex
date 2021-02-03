@@ -499,8 +499,11 @@ targeting general purpose recursive functions over algebraic datatypes.
 \emph{Deforestation} is the technique of removing intermediary list/tree-like
 data in functional computations~\cite{wadler-deforestation}.
 %
-For example, given the functional program \il{sum(map square (upto 1 n))}, a
-compiler or interpreter would generally have \il{upto 1 n} return a list of
+For example, take the functional program:
+\begin{code}
+  sum(map square (upto 1 n))
+\end{code}
+A compiler or interpreter would generally have \il{upto 1 n} return a list of
 numbers from $1$ to $n$, then have the \il{map} procedure return a new list with
 the numbers squared, and finally have \il{sum} consume this list and return an
 integer. This style of programming is convenient, because it allows programmers
